@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'core/app_theme.dart';
 import 'core/workout_provider.dart';
 import 'features/home_screen.dart';
+import 'features/history_screen.dart';
 import 'features/workout_logger_screen.dart';
 import 'features/profile_screen.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -65,6 +66,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                   index: _currentIndex,
                   children: const [
                     HomeScreen(),
+                    HistoryScreen(),
                     ProfileScreen(),
                   ],
                 ),
@@ -90,8 +92,9 @@ class _MainScaffoldState extends State<MainScaffold> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           _buildTabItem(LucideIcons.house, 'Home', 0),
+          _buildTabItem(LucideIcons.clockArrowUp, 'History', 1),
           _buildFab(),
-          _buildTabItem(LucideIcons.user, 'Profile', 1),
+          _buildTabItem(LucideIcons.user, 'Profile', 2),
         ],
       ),
     );
