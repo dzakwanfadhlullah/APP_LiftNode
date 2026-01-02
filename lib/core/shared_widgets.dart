@@ -311,10 +311,10 @@ class _NeonButtonState extends State<NeonButton> {
                 side: config.borderSide,
               ),
             ),
-            child: GestureDetector(
-              onTapDown: (_) => setState(() => _isPressed = true),
-              onTapUp: (_) => setState(() => _isPressed = false),
-              onTapCancel: () => setState(() => _isPressed = false),
+            child: Listener(
+              onPointerDown: (_) => setState(() => _isPressed = true),
+              onPointerUp: (_) => setState(() => _isPressed = false),
+              onPointerCancel: (_) => setState(() => _isPressed = false),
               child: widget.isLoading
                   ? _buildLoader(config)
                   : _buildContent(config),
