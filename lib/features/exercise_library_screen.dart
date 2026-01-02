@@ -369,6 +369,30 @@ class _CustomExerciseSheetState extends State<_CustomExerciseSheet> {
   String _selectedMuscle = 'Chest';
 
   @override
+  void initState() {
+    super.initState();
+    // Listen for provider errors
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<WorkoutProvider>();
+      provider.addListener(() {
+        if (provider.errorMessage != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(provider.errorMessage!),
+              backgroundColor: AppColors.error,
+              action: SnackBarAction(
+                label: 'Dismiss',
+                textColor: Colors.white,
+                onPressed: provider.clearError,
+              ),
+            ),
+          );
+        }
+      });
+    });
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     super.dispose();
@@ -444,11 +468,28 @@ class _CustomExerciseSheetState extends State<_CustomExerciseSheet> {
             width: double.infinity,
             isDisabled: _nameController.text.isEmpty,
             onPress: () {
+              final name = _nameController.text.trim();
+              if (name.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Please enter an exercise name')),
+                );
+                return;
+              }
+              if (name.length < 3) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                      content: Text('Name must be at least 3 characters')),
+                );
+                return;
+              }
+
               final newEx = Exercise(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                name: _nameController.text,
+                id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
+                name: name,
                 muscle: _selectedMuscle,
                 equipment: 'Custom',
+                isCustom: true,
               );
               context.read<WorkoutProvider>().addCustomExercise(newEx);
               Navigator.pop(context);

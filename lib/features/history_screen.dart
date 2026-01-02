@@ -661,6 +661,30 @@ class _WorkoutCard extends StatelessWidget {
     return Dismissible(
       key: Key(workout.id),
       direction: DismissDirection.endToStart,
+      confirmDismiss: (direction) async {
+        return await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: AppColors.bgSurface,
+            title:
+                const Text('Delete Workout', style: AppTypography.titleMedium),
+            content: const Text(
+                'Are you sure you want to delete this workout? This action cannot be undone.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel',
+                    style: TextStyle(color: AppColors.textSecondary)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Delete',
+                    style: TextStyle(color: AppColors.error)),
+              ),
+            ],
+          ),
+        );
+      },
       onDismissed: (_) => onDelete(),
       background: Container(
         margin: const EdgeInsets.only(bottom: 12),

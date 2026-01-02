@@ -57,12 +57,14 @@ class Exercise {
   final String name;
   final String muscle;
   final String equipment;
+  final bool isCustom;
 
   Exercise({
     required this.id,
     required this.name,
     required this.muscle,
     required this.equipment,
+    this.isCustom = false,
   });
 
   Map<String, dynamic> toJson() => {
@@ -70,13 +72,15 @@ class Exercise {
         'name': name,
         'muscle': muscle,
         'equipment': equipment,
+        'isCustom': isCustom,
       };
 
   factory Exercise.fromJson(Map<String, dynamic> json) => Exercise(
-        id: json['id'],
-        name: json['name'],
-        muscle: json['muscle'],
-        equipment: json['equipment'],
+        id: json['id'] ?? '',
+        name: json['name'] ?? '',
+        muscle: json['muscle'] ?? '',
+        equipment: json['equipment'] ?? '',
+        isCustom: json['isCustom'] ?? false,
       );
 }
 

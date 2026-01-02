@@ -16,6 +16,7 @@ class WorkoutProvider with ChangeNotifier {
   List<ActiveExercise> _exercises = [];
   List<Exercise> _customExercises = [];
   Timer? _timer;
+  String? _errorMessage;
 
   WorkoutProvider() {
     _loadState();
@@ -27,6 +28,12 @@ class WorkoutProvider with ChangeNotifier {
   bool get isResting => _restStartTime != null;
   List<ActiveExercise> get exercises => _exercises;
   List<Exercise> get customExercises => _customExercises;
+  String? get errorMessage => _errorMessage;
+
+  void clearError() {
+    _errorMessage = null;
+    notifyListeners();
+  }
 
   void startWorkout() {
     _isActive = true;
@@ -69,11 +76,12 @@ class WorkoutProvider with ChangeNotifier {
               .toList();
         }
         if (_isActive) _startTimer();
-        notifyListeners();
       }
     } catch (e) {
+      _errorMessage = 'Failed to load workout data: $e';
       debugPrint('Error loading state: $e');
     }
+    notifyListeners();
   }
 
   Future<void> _saveState() async {
@@ -88,7 +96,9 @@ class WorkoutProvider with ChangeNotifier {
       });
       await prefs.setString('workout_state', data);
     } catch (e) {
+      _errorMessage = 'Failed to save workout data: $e';
       debugPrint('Error saving state: $e');
+      notifyListeners();
     }
   }
 
@@ -137,6 +147,12 @@ class WorkoutProvider with ChangeNotifier {
       sets: [WorkoutSet(id: 's1', kg: '', reps: '', completed: false)],
     );
     _exercises.add(newActive);
+    _saveState();
+    notifyListeners();
+  }
+
+  void removeExercise(String id) {
+    _exercises.removeWhere((ex) => ex.id == id);
     _saveState();
     notifyListeners();
   }

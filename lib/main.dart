@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'core/app_theme.dart';
 import 'core/workout_provider.dart';
+import 'core/shared_widgets.dart';
 import 'features/home_screen.dart';
 import 'features/history_screen.dart';
 import 'features/workout_logger_screen.dart';
@@ -13,7 +14,9 @@ void main() {
   runApp(
     MultiProvider(
       providers: [ChangeNotifierProvider(create: (_) => WorkoutProvider())],
-      child: const GymTrackerApp(),
+      child: const GlobalErrorBoundary(
+        child: GymTrackerApp(),
+      ),
     ),
   );
 }

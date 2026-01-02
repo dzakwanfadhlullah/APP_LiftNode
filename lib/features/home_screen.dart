@@ -39,6 +39,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       curve: Curves.easeOutCubic,
     );
     _counterController.forward();
+
+    // 9.2 Data Resilience - Error Listener
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<WorkoutProvider>();
+      provider.addListener(() {
+        if (provider.errorMessage != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(provider.errorMessage!),
+              backgroundColor: AppColors.error,
+              action: SnackBarAction(
+                label: 'Dismiss',
+                textColor: Colors.white,
+                onPressed: provider.clearError,
+              ),
+            ),
+          );
+        }
+      });
+    });
   }
 
   @override

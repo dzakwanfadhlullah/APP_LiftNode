@@ -27,6 +27,30 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
   final List<int> _restPresets = [30, 60, 90, 120, 180];
 
   @override
+  void initState() {
+    super.initState();
+    // 9.2 Data Resilience - Error Listener
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final provider = context.read<WorkoutProvider>();
+      provider.addListener(() {
+        if (provider.errorMessage != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(provider.errorMessage!),
+              backgroundColor: AppColors.error,
+              action: SnackBarAction(
+                label: 'Dismiss',
+                textColor: Colors.white,
+                onPressed: provider.clearError,
+              ),
+            ),
+          );
+        }
+      });
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgMain,
@@ -854,6 +878,7 @@ class _SetRowState extends State<_SetRow> {
             _buildInput(
               controller: _kgController,
               focusNode: _kgFocus,
+              isDecimal: true,
               onChanged: (v) =>
                   provider.updateSet(widget.exIndex, widget.setIndex, kg: v),
               onSubmitted: (_) => _repsFocus.requestFocus(),
@@ -925,16 +950,23 @@ class _SetRowState extends State<_SetRow> {
     required FocusNode focusNode,
     required Function(String) onChanged,
     required Function(String) onSubmitted,
+    bool isDecimal = false,
   }) {
     return SizedBox(
       width: 65,
       child: TextField(
         controller: controller,
         focusNode: focusNode,
-        keyboardType: TextInputType.number,
+        keyboardType: TextInputType.numberWithOptions(decimal: isDecimal),
         textAlign: TextAlign.center,
         textInputAction: TextInputAction.next,
         style: AppTypography.statSmall.copyWith(fontSize: 18),
+        inputFormatters: [
+          if (isDecimal)
+            FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))
+          else
+            FilteringTextInputFormatter.digitsOnly,
+        ],
         decoration: const InputDecoration(
           contentPadding: EdgeInsets.symmetric(vertical: 8),
           filled: true,
