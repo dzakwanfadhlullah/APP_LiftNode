@@ -102,7 +102,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     ),
                   ),
                   Spacing.vXxs,
-                  Text(
+                  const Text(
                     'Dzakwan',
                     style: AppTypography.headlineMedium,
                   ),
@@ -181,7 +181,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Container(
               width: 40,
               height: 4,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.border,
                 borderRadius: AppRadius.roundedFull,
               ),
@@ -189,7 +189,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Spacing.vLg,
             const Icon(LucideIcons.flame, size: 64, color: Color(0xFFF97316)),
             Spacing.vMd,
-            Text('12 Day Streak! 🔥', style: AppTypography.displayMedium),
+            const Text('12 Day Streak! 🔥', style: AppTypography.displayMedium),
             Spacing.vSm,
             Text(
               'Keep it up! You\'re on fire.',
@@ -333,13 +333,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             Container(
               width: 40,
               height: 4,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.border,
                 borderRadius: AppRadius.roundedFull,
               ),
             ),
             Spacing.vLg,
-            Text('Quick Actions', style: AppTypography.headlineSmall),
+            const Text('Quick Actions', style: AppTypography.headlineSmall),
             Spacing.vLg,
             _buildQuickActionItem(
               icon: LucideIcons.plus,
@@ -415,7 +415,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   style: AppTypography.overline
                       .copyWith(color: AppColors.textSecondary),
                 ),
-                Icon(
+                const Icon(
                   LucideIcons.refreshCw,
                   size: 12,
                   color: AppColors.textMuted,
@@ -469,7 +469,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ],
             ),
             Spacing.vSm,
-            Text('Push Day A', style: AppTypography.headlineSmall),
+            const Text('Push Day A', style: AppTypography.headlineSmall),
             Spacing.vXxs,
             // Animated stat counter
             ListenableBuilder(
@@ -523,14 +523,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 child: Container(
                   width: 40,
                   height: 4,
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.border,
                     borderRadius: AppRadius.roundedFull,
                   ),
                 ),
               ),
               Spacing.vLg,
-              Text('Push Day A', style: AppTypography.displayMedium),
+              const Text('Push Day A', style: AppTypography.displayMedium),
               Spacing.vXs,
               Text(
                 'Yesterday • 45 minutes',
@@ -545,7 +545,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               Spacing.vLg,
               const GymDivider(),
               Spacing.vMd,
-              Text('Exercises', style: AppTypography.titleLarge),
+              const Text('Exercises', style: AppTypography.titleLarge),
               Spacing.vMd,
               _buildExerciseItem('Bench Press', '4 sets • 60-80kg'),
               _buildExerciseItem('Incline DB Press', '3 sets • 25-30kg'),
@@ -616,7 +616,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Recent History', style: AppTypography.headlineSmall),
+              const Text('Recent History', style: AppTypography.headlineSmall),
               TextButton.icon(
                 onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('History page coming soon!')),
@@ -702,7 +702,7 @@ class _HistoryItem extends StatelessWidget {
       onDismissed: (_) => onDismissed(),
       background: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: AppColors.error,
           borderRadius: AppRadius.roundedLg,
         ),

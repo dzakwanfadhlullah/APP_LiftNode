@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:vibration/vibration.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'app_theme.dart';
 
 // =============================================================================
@@ -371,7 +371,7 @@ class _NeonButtonState extends State<NeonButton> {
   }
 
   void _handlePress() {
-    Vibration.vibrate(duration: 10);
+    if (!kIsWeb) HapticFeedback.lightImpact();
     widget.onPress!();
   }
 
@@ -1050,7 +1050,7 @@ class GymEmptyState extends StatelessWidget {
           children: [
             Container(
               padding: const EdgeInsets.all(Spacing.lg),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.bgCard,
                 shape: BoxShape.circle,
               ),

@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:vibration/vibration.dart';
 import '../models/models.dart';
 
 class WorkoutProvider with ChangeNotifier {
@@ -172,7 +172,7 @@ class WorkoutProvider with ChangeNotifier {
 
     if (isNowComplete) {
       _restStartTime = DateTime.now().millisecondsSinceEpoch;
-      Vibration.vibrate(duration: 20);
+      if (!kIsWeb) HapticFeedback.mediumImpact();
     }
 
     _saveState();
