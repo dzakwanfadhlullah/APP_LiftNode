@@ -218,13 +218,12 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      const Row(
                         children: [
-                          const Icon(LucideIcons.timer,
+                          Icon(LucideIcons.timer,
                               size: 16, color: AppColors.brandPrimary),
                           Spacing.hSm,
-                          const Text('REST TIME',
-                              style: AppTypography.overline),
+                          Text('REST TIME', style: AppTypography.overline),
                         ],
                       ),
                       Spacing.vSm,
@@ -259,7 +258,7 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
                   onTap: () => provider.stopRest(),
                   child: Container(
                     padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.bgCardHover,
                       borderRadius: AppRadius.roundedMd,
                     ),
@@ -280,7 +279,7 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           color: AppColors.bgCardHover,
           borderRadius: AppRadius.roundedSm,
         ),
@@ -315,7 +314,7 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
             onTap: () => _confirmCancelWorkout(context, provider),
             child: Container(
               padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.bgCardHover,
                 borderRadius: AppRadius.roundedMd,
               ),
@@ -386,7 +385,7 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
       context: context,
       builder: (context) => AlertDialog(
         backgroundColor: AppColors.bgCard,
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.roundedLg),
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.roundedLg),
         title:
             const Text('Cancel Workout?', style: AppTypography.headlineSmall),
         content: Text(
@@ -549,7 +548,7 @@ class _ExerciseCard extends StatelessWidget {
                   onTap: () => _showExerciseOptions(context),
                   child: Container(
                     padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppColors.bgCardHover,
                       borderRadius: AppRadius.roundedSm,
                     ),
@@ -648,7 +647,7 @@ class _ExerciseCard extends StatelessWidget {
             Container(
               width: 40,
               height: 4,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 color: AppColors.border,
                 borderRadius: AppRadius.roundedFull,
               ),
@@ -795,7 +794,7 @@ class _SetRowState extends State<_SetRow> {
                 child: Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
+                  decoration: const BoxDecoration(
                     color: AppColors.bgCardHover,
                     borderRadius: AppRadius.roundedXs,
                   ),
@@ -908,8 +907,8 @@ class _SetRowState extends State<_SetRow> {
         textAlign: TextAlign.center,
         textInputAction: TextInputAction.next,
         style: AppTypography.statSmall.copyWith(fontSize: 18),
-        decoration: InputDecoration(
-          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: const InputDecoration(
+          contentPadding: EdgeInsets.symmetric(vertical: 8),
           filled: true,
           fillColor: AppColors.bgInput,
           border: OutlineInputBorder(
@@ -918,8 +917,7 @@ class _SetRowState extends State<_SetRow> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: AppRadius.roundedSm,
-            borderSide:
-                const BorderSide(color: AppColors.brandPrimary, width: 2),
+            borderSide: BorderSide(color: AppColors.brandPrimary, width: 2),
           ),
         ),
         onChanged: onChanged,
@@ -962,7 +960,7 @@ class _WorkoutSummarySheet extends StatelessWidget {
           Container(
             width: 40,
             height: 4,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppColors.border,
               borderRadius: AppRadius.roundedFull,
             ),
@@ -1115,7 +1113,7 @@ class _WorkoutSettingsSheet extends StatelessWidget {
           Container(
             width: 40,
             height: 4,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppColors.border,
               borderRadius: AppRadius.roundedFull,
             ),
