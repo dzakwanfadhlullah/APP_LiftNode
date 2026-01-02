@@ -1,16 +1,62 @@
-# gym_tracker_flutter
+# 💪 Gym Tracker Pro
 
-A new Flutter project.
+Aplikasi tracking workout yang dibuat pakai Flutter. Simple, cepat, dan nyimpen data latihan lo secara lokal.
 
-## Getting Started
+## Kenapa Bikin Ini?
 
-This project is a starting point for a Flutter application.
+Capek pake aplikasi gym yang ribet dan penuh iklan. Yang gue butuhin cuma:
+- Catat latihan hari ini
+- Liat progres gue
+- Ga perlu internet, data aman di HP
 
-A few resources to get you started if this is your first Flutter project:
+Jadi ya udah, bikin sendiri aja.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+## Fitur
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+- **Workout Logger** - Catat exercise, set, reps, dan beban
+- **Rest Timer** - Auto nyala setelah set selesai
+- **Dashboard** - Liat statistik dan history latihan
+- **Profile** - Track pencapaian dan level
+- **Offline First** - Semua data disimpen lokal, ga perlu login
+
+## Tech Stack
+
+- Flutter 3.x
+- Provider (state management)
+- shared_preferences (local storage)
+- fl_chart (grafik volume)
+
+## Cara Jalanin
+
+```bash
+# Clone repo
+git clone https://github.com/YOUR_USERNAME/gym-tracker-flutter.git
+
+# Install dependencies
+flutter pub get
+
+# Run di Chrome
+flutter run -d chrome
+
+# Atau build APK
+flutter build apk
+```
+
+## Screenshots
+
+*Coming soon*
+
+## Roadmap
+
+- [ ] Cloud sync
+- [ ] Progress photos
+- [ ] Custom exercise database
+- [ ] Export data ke CSV
+
+## Status
+
+🟡 **Beta v1** - Masih development, tapi udah bisa dipake buat tracking workout harian.
+
+---
+
+Made with ☕ and 🎧
