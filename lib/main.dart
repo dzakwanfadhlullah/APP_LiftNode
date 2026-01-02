@@ -54,7 +54,8 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    final workoutActive = context.watch<WorkoutProvider>().isActive;
+    final workoutActive =
+        context.select<WorkoutProvider, bool>((p) => p.isActive);
 
     return Scaffold(
       backgroundColor: AppColors.bgMain,

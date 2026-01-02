@@ -28,15 +28,13 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final provider = context.watch<WorkoutProvider>();
-
     return Scaffold(
       backgroundColor: AppColors.bgMain,
       body: Stack(
         children: [
           Column(
             children: [
-              _buildHeader(context, provider),
+              _buildHeader(context),
               Expanded(
                 child: SingleChildScrollView(
                   padding: Spacing.paddingScreen,
@@ -47,26 +45,38 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
                     children: [
                       _buildWorkoutTitle(context),
                       Spacing.vLg,
-                      if (provider.exercises.isEmpty)
-                        _buildEmptyState(context)
-                      else
-                        ...provider.exercises.asMap().entries.map((entry) {
-                          return _ExerciseCard(
-                            key: ValueKey('exercise_${entry.key}'),
-                            exIndex: entry.key,
-                            exercise: entry.value,
-                            onDeleteSet: (setIndex) =>
-                                _confirmDeleteSet(context, entry.key, setIndex),
+                      Selector<WorkoutProvider, List<ActiveExercise>>(
+                        selector: (_, p) => p.exercises,
+                        builder: (context, exercises, child) {
+                          if (exercises.isEmpty) {
+                            return _buildEmptyState(context);
+                          }
+                          return Column(
+                            children: exercises.asMap().entries.map((entry) {
+                              return _ExerciseCard(
+                                key: ValueKey('exercise_${entry.key}'),
+                                exIndex: entry.key,
+                                exercise: entry.value,
+                                onDeleteSet: (setIndex) => _confirmDeleteSet(
+                                    context, entry.key, setIndex),
+                              );
+                            }).toList(),
                           );
-                        }),
+                        },
+                      ),
                       Spacing.vMd,
-                      if (provider.exercises.isNotEmpty)
-                        NeonButton(
-                          title: 'Add Exercise',
-                          variant: 'secondary',
-                          icon: LucideIcons.plus,
-                          onPress: () => _showExerciseModal(context),
-                        ),
+                      Selector<WorkoutProvider, bool>(
+                        selector: (_, p) => p.exercises.isNotEmpty,
+                        builder: (context, hasExercises, child) {
+                          if (!hasExercises) return const SizedBox.shrink();
+                          return NeonButton(
+                            title: 'Add Exercise',
+                            variant: 'secondary',
+                            icon: LucideIcons.plus,
+                            onPress: () => _showExerciseModal(context),
+                          );
+                        },
+                      ),
                       Spacing.vXxl,
                     ],
                   ),
@@ -74,7 +84,13 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
               ),
             ],
           ),
-          if (provider.isResting) _buildEnhancedRestTimer(context, provider),
+          Selector<WorkoutProvider, bool>(
+            selector: (_, p) => p.isResting,
+            builder: (context, isResting, child) {
+              if (isResting) return _buildEnhancedRestTimer(context);
+              return const SizedBox.shrink();
+            },
+          ),
         ],
       ),
     );
@@ -152,8 +168,8 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
   // PHASE 4.3: ENHANCED REST TIMER WITH CIRCULAR PROGRESS
   // ===========================================================================
 
-  Widget _buildEnhancedRestTimer(
-      BuildContext context, WorkoutProvider provider) {
+  Widget _buildEnhancedRestTimer(BuildContext context) {
+    final provider = context.read<WorkoutProvider>();
     // Parse elapsed time to get seconds
     final parts = provider.restElapsedTime.split(':');
     final minutes = int.tryParse(parts[0]) ?? 0;
@@ -197,9 +213,15 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
                       Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            provider.restElapsedTime,
-                            style: AppTypography.stat.copyWith(fontSize: 20),
+                          Selector<WorkoutProvider, String>(
+                            selector: (_, p) => p.restElapsedTime,
+                            builder: (context, restElapsedTime, child) {
+                              return Text(
+                                restElapsedTime,
+                                style:
+                                    AppTypography.stat.copyWith(fontSize: 20),
+                              );
+                            },
                           ),
                           Text(
                             '/ ${_formatRestTime(_selectedRestTime)}',
@@ -298,7 +320,8 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
   // HEADER & EMPTY STATE
   // ===========================================================================
 
-  Widget _buildHeader(BuildContext context, WorkoutProvider provider) {
+  Widget _buildHeader(BuildContext context) {
+    final provider = context.read<WorkoutProvider>();
     return Container(
       color: AppColors.bgCard,
       padding: EdgeInsets.only(
@@ -357,12 +380,17 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
                   const Icon(LucideIcons.clock,
                       size: 14, color: AppColors.textSecondary),
                   Spacing.hXs,
-                  Text(
-                    provider.elapsedTime,
-                    style: AppTypography.statSmall.copyWith(
-                      fontFamily: 'monospace',
-                      fontSize: 18,
-                    ),
+                  Selector<WorkoutProvider, String>(
+                    selector: (_, p) => p.elapsedTime,
+                    builder: (context, elapsedTime, child) {
+                      return Text(
+                        elapsedTime,
+                        style: AppTypography.statSmall.copyWith(
+                          fontFamily: 'monospace',
+                          fontSize: 18,
+                        ),
+                      );
+                    },
                   ),
                 ],
               ),
