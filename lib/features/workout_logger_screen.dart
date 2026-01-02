@@ -1211,7 +1211,11 @@ class _ExerciseSelectModalState extends State<ExerciseSelectModal> {
 
   @override
   Widget build(BuildContext context) {
-    final filteredExercises = AppConstants.exerciseDb.where((ex) {
+    final customExercises = context
+        .select<WorkoutProvider, List<Exercise>>((p) => p.customExercises);
+    final allExercises = [...AppConstants.exerciseDb, ...customExercises];
+
+    final filteredExercises = allExercises.where((ex) {
       final matchesSearch =
           ex.name.toLowerCase().contains(_searchQuery.toLowerCase());
       final matchesFilter =

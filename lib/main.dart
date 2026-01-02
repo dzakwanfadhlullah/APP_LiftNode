@@ -6,6 +6,7 @@ import 'features/home_screen.dart';
 import 'features/history_screen.dart';
 import 'features/workout_logger_screen.dart';
 import 'features/profile_screen.dart';
+import 'features/exercise_library_screen.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 void main() {
@@ -68,6 +69,7 @@ class _MainScaffoldState extends State<MainScaffold> {
                   children: const [
                     HomeScreen(),
                     HistoryScreen(),
+                    ExerciseLibraryScreen(),
                     ProfileScreen(),
                   ],
                 ),
@@ -95,7 +97,8 @@ class _MainScaffoldState extends State<MainScaffold> {
           _buildTabItem(LucideIcons.house, 'Home', 0),
           _buildTabItem(LucideIcons.clockArrowUp, 'History', 1),
           _buildFab(),
-          _buildTabItem(LucideIcons.user, 'Profile', 2),
+          _buildTabItem(LucideIcons.dumbbell, 'Library', 2),
+          _buildTabItem(LucideIcons.user, 'Profile', 3),
         ],
       ),
     );

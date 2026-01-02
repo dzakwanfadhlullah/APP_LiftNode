@@ -14,6 +14,7 @@ class WorkoutProvider with ChangeNotifier {
   String _restElapsedTime = '00:00';
 
   List<ActiveExercise> _exercises = [];
+  List<Exercise> _customExercises = [];
   Timer? _timer;
 
   WorkoutProvider() {
@@ -25,6 +26,7 @@ class WorkoutProvider with ChangeNotifier {
   String get restElapsedTime => _restElapsedTime;
   bool get isResting => _restStartTime != null;
   List<ActiveExercise> get exercises => _exercises;
+  List<Exercise> get customExercises => _customExercises;
 
   void startWorkout() {
     _isActive = true;
@@ -61,6 +63,11 @@ class WorkoutProvider with ChangeNotifier {
               .map((e) => ActiveExercise.fromJson(e))
               .toList();
         }
+        if (decoded['customExercises'] != null) {
+          _customExercises = (decoded['customExercises'] as List)
+              .map((e) => Exercise.fromJson(e))
+              .toList();
+        }
         if (_isActive) _startTimer();
         notifyListeners();
       }
@@ -77,6 +84,7 @@ class WorkoutProvider with ChangeNotifier {
         'startTime': _startTime,
         'restStartTime': _restStartTime,
         'exercises': _exercises.map((e) => e.toJson()).toList(),
+        'customExercises': _customExercises.map((e) => e.toJson()).toList(),
       });
       await prefs.setString('workout_state', data);
     } catch (e) {
@@ -175,6 +183,12 @@ class WorkoutProvider with ChangeNotifier {
       if (!kIsWeb) HapticFeedback.mediumImpact();
     }
 
+    _saveState();
+    notifyListeners();
+  }
+
+  void addCustomExercise(Exercise exercise) {
+    _customExercises.add(exercise);
     _saveState();
     notifyListeners();
   }
