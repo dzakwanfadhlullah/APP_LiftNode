@@ -1230,7 +1230,7 @@ class _ExerciseSelectModalState extends State<ExerciseSelectModal> {
                   leading: Container(
                     width: 48,
                     height: 48,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       gradient: AppColors.gradientPrimary,
                       borderRadius: AppRadius.roundedMd,
                     ),
