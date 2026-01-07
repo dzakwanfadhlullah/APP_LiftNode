@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:provider/provider.dart';
 import '../app_theme.dart';
+import '../settings_provider.dart';
 
 // =============================================================================
 // GYM CARD - Enhanced with onLongPress, hover, and press animations
@@ -47,6 +49,12 @@ class _GymCardState extends State<GymCard> with SingleTickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
+    final fastDuration =
+        settings.reducedMotion ? Duration.zero : AppAnimations.fast;
+    final hoverDuration =
+        settings.reducedMotion ? Duration.zero : AppAnimations.cardHover;
+
     final scale = _isPressed ? 0.98 : (_isHovered ? 1.01 : 1.0);
     final bgColor = _isHovered
         ? AppColors.bgCardHover
@@ -72,10 +80,10 @@ class _GymCardState extends State<GymCard> with SingleTickerProviderStateMixin {
             : null,
         child: AnimatedScale(
           scale: scale,
-          duration: AppAnimations.fast,
+          duration: fastDuration,
           curve: AppAnimations.snappy,
           child: AnimatedContainer(
-            duration: AppAnimations.cardHover,
+            duration: hoverDuration,
             curve: AppAnimations.defaultCurve,
             width: widget.width,
             height: widget.height,

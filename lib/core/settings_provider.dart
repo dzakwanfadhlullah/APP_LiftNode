@@ -19,6 +19,8 @@ class SettingsProvider with ChangeNotifier {
   bool _notificationsEnabled = true;
   bool _hapticFeedbackEnabled = true;
   bool _autoRestTimer = true;
+  bool _largeTouchTargets = false;
+  bool _reducedMotion = false;
   int _defaultRestSeconds = 90;
   String _weightUnit = 'kg';
 
@@ -45,6 +47,8 @@ class SettingsProvider with ChangeNotifier {
   bool get notificationsEnabled => _notificationsEnabled;
   bool get hapticFeedbackEnabled => _hapticFeedbackEnabled;
   bool get autoRestTimer => _autoRestTimer;
+  bool get largeTouchTargets => _largeTouchTargets;
+  bool get reducedMotion => _reducedMotion;
   int get defaultRestSeconds => _defaultRestSeconds;
   String get weightUnit => _weightUnit;
   String get userName => _userName;
@@ -77,6 +81,18 @@ class SettingsProvider with ChangeNotifier {
 
   void setAutoRestTimer(bool value) {
     _autoRestTimer = value;
+    _saveSettings();
+    notifyListeners();
+  }
+
+  void setLargeTouchTargets(bool value) {
+    _largeTouchTargets = value;
+    _saveSettings();
+    notifyListeners();
+  }
+
+  void setReducedMotion(bool value) {
+    _reducedMotion = value;
     _saveSettings();
     notifyListeners();
   }
@@ -117,6 +133,8 @@ class SettingsProvider with ChangeNotifier {
         _notificationsEnabled = json['notificationsEnabled'] ?? true;
         _hapticFeedbackEnabled = json['hapticFeedbackEnabled'] ?? true;
         _autoRestTimer = json['autoRestTimer'] ?? true;
+        _largeTouchTargets = json['largeTouchTargets'] ?? false;
+        _reducedMotion = json['reducedMotion'] ?? false;
         _defaultRestSeconds = json['defaultRestSeconds'] ?? 90;
         _weightUnit = json['weightUnit'] ?? 'kg';
 
@@ -139,6 +157,8 @@ class SettingsProvider with ChangeNotifier {
         'notificationsEnabled': _notificationsEnabled,
         'hapticFeedbackEnabled': _hapticFeedbackEnabled,
         'autoRestTimer': _autoRestTimer,
+        'largeTouchTargets': _largeTouchTargets,
+        'reducedMotion': _reducedMotion,
         'defaultRestSeconds': _defaultRestSeconds,
         'weightUnit': _weightUnit,
         'userName': _userName,

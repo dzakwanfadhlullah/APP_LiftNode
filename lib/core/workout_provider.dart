@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
+import 'constants.dart'; // Required for recent exercise lookup
 
 class WorkoutProvider with ChangeNotifier {
   bool _isActive = false;
@@ -15,6 +16,7 @@ class WorkoutProvider with ChangeNotifier {
 
   List<ActiveExercise> _exercises = [];
   List<Exercise> _customExercises = [];
+  List<String> _favoriteIds = [];
   List<WorkoutHistory> _history = [];
   Timer? _timer;
   String? _errorMessage;
@@ -46,6 +48,46 @@ class WorkoutProvider with ChangeNotifier {
   bool get canUndo => _lastAction != null;
   WorkoutHistory? get lastSession =>
       _history.isNotEmpty ? _history.first : null;
+  List<String> get favoriteIds => List.unmodifiable(_favoriteIds);
+
+  List<Exercise> getRecentExercises() {
+    final recentNames = <String>{};
+    for (var h in _history) {
+      if (recentNames.length >= 20) break;
+      // Reverse iterate exercises in history for correctness (first is first done)
+      // but typically we want insertion order. History stores List.
+      // Assuming new to old history iteration:
+      for (var name in h.exercises.reversed) {
+        recentNames.add(name);
+      }
+    }
+
+    final allExercises = [...AppConstants.exerciseDb, ..._customExercises];
+    final recentEx = <Exercise>[];
+
+    for (var name in recentNames) {
+      try {
+        final ex = allExercises.firstWhere((e) => e.name == name);
+        recentEx.add(ex);
+      } catch (_) {
+        // Exercise might have been renamed or deleted
+      }
+      if (recentEx.length >= 10) break;
+    }
+    return recentEx;
+  }
+
+  bool isFavorite(String id) => _favoriteIds.contains(id);
+
+  void toggleFavorite(String id) {
+    if (_favoriteIds.contains(id)) {
+      _favoriteIds.remove(id);
+    } else {
+      _favoriteIds.add(id);
+    }
+    _saveState(); // Not debounced to instant persist UI
+    notifyListeners();
+  }
 
   int _calculateStreak() {
     if (_history.isEmpty) return 0;
@@ -206,6 +248,9 @@ class WorkoutProvider with ChangeNotifier {
               .map((e) => WorkoutHistory.fromJson(e))
               .toList();
         }
+        if (decoded['favorites'] != null) {
+          _favoriteIds = List<String>.from(decoded['favorites']);
+        }
         _bestStreak = decoded['bestStreak'] ?? 0;
         if (_isActive) _startTimer();
       }
@@ -225,6 +270,7 @@ class WorkoutProvider with ChangeNotifier {
         'restStartTime': _restStartTime,
         'exercises': _exercises.map((e) => e.toJson()).toList(),
         'customExercises': _customExercises.map((e) => e.toJson()).toList(),
+        'favorites': _favoriteIds,
         'history': _history.map((e) => e.toJson()).toList(),
         'bestStreak': _bestStreak,
       });
@@ -238,11 +284,19 @@ class WorkoutProvider with ChangeNotifier {
 
   /// Debounced version of _saveState - prevents too many writes
   void _saveStateDebounced() {
+    _pruneHistory(); // Ensure limits are respected
     _saveDebounce?.cancel();
     _saveDebounce = Timer(
       const Duration(milliseconds: _saveDebounceMs),
       () => _saveState(),
     );
+  }
+
+  void _pruneHistory() {
+    if (_history.length > 500) {
+      // Keep only the 500 most recent items
+      _history = _history.sublist(0, 500);
+    }
   }
 
   /// Undo last set action (if available)

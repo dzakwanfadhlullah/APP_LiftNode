@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:provider/provider.dart';
 import '../app_theme.dart';
+import '../settings_provider.dart';
 
 // =============================================================================
 // NEON BUTTON - Enhanced with size variants and icon-only mode
@@ -74,6 +76,12 @@ class _NeonButtonState extends State<NeonButton> {
   bool _isPressed = false;
 
   double get _height {
+    final settings = context.watch<SettingsProvider>();
+    final baseHeight = widget.height ?? _getBaseHeight();
+    return settings.largeTouchTargets ? baseHeight * 1.2 : baseHeight;
+  }
+
+  double _getBaseHeight() {
     if (widget.height != null) return widget.height!;
     switch (widget.size) {
       case ButtonSize.small:
@@ -124,18 +132,21 @@ class _NeonButtonState extends State<NeonButton> {
 
   @override
   Widget build(BuildContext context) {
+    final settings = context.watch<SettingsProvider>();
     final config = _getVariantConfig();
     final isEnabled =
         !widget.isDisabled && !widget.isLoading && widget.onPress != null;
     final scale = _isPressed ? 0.95 : 1.0;
+    final duration =
+        settings.reducedMotion ? Duration.zero : AppAnimations.buttonPress;
 
     if (widget.isIconOnly) {
-      return _buildIconButton(config, isEnabled, scale);
+      return _buildIconButton(config, isEnabled, scale, duration);
     }
 
     return AnimatedScale(
       scale: scale,
-      duration: AppAnimations.buttonPress,
+      duration: duration,
       curve: AppAnimations.snappy,
       child: SizedBox(
         width: widget.width,
@@ -146,7 +157,8 @@ class _NeonButtonState extends State<NeonButton> {
             boxShadow: isEnabled ? config.shadows : null,
           ),
           child: AnimatedOpacity(
-            duration: AppAnimations.fast,
+            duration:
+                settings.reducedMotion ? Duration.zero : AppAnimations.fast,
             opacity: isEnabled ? 1.0 : 0.5,
             child: ElevatedButton(
               onPressed: isEnabled ? _handlePress : null,
@@ -181,13 +193,15 @@ class _NeonButtonState extends State<NeonButton> {
     );
   }
 
-  Widget _buildIconButton(_ButtonConfig config, bool isEnabled, double scale) {
+  Widget _buildIconButton(
+      _ButtonConfig config, bool isEnabled, double scale, Duration duration) {
+    final settings = context.watch<SettingsProvider>();
     return AnimatedScale(
       scale: scale,
-      duration: AppAnimations.buttonPress,
+      duration: duration,
       curve: AppAnimations.snappy,
       child: AnimatedOpacity(
-        duration: AppAnimations.fast,
+        duration: settings.reducedMotion ? Duration.zero : AppAnimations.fast,
         opacity: isEnabled ? 1.0 : 0.5,
         child: Material(
           color: config.backgroundColor,

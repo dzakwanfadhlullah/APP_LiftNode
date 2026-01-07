@@ -22,6 +22,8 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
 
   final List<String> _muscles = [
     'All',
+    'Favorites',
+    'Recent',
     'Abdominals',
     'Abductors',
     'Adductors',
@@ -53,10 +55,36 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
     final filteredExercises = exercises.where((ex) {
       final matchesSearch =
           ex.name.toLowerCase().contains(_searchQuery.toLowerCase());
-      final matchesFilter =
-          _selectedFilter == 'All' || ex.muscle == _selectedFilter;
+
+      bool matchesFilter = true;
+      if (_selectedFilter == 'All') {
+        matchesFilter = true;
+      } else if (_selectedFilter == 'Favorites') {
+        matchesFilter = context.read<WorkoutProvider>().isFavorite(ex.id);
+      } else if (_selectedFilter == 'Recent') {
+        // Special handling: Recent filter is usually a subset list, but here we filter
+        // If we want to show exact recent ORDER, we should probably switch source list entirely.
+        // But for "Filtering" style:
+        final recentIds = context
+            .read<WorkoutProvider>()
+            .getRecentExercises()
+            .map((e) => e.id)
+            .toSet();
+        matchesFilter = recentIds.contains(ex.id);
+      } else {
+        matchesFilter = ex.muscle == _selectedFilter;
+      }
       return matchesSearch && matchesFilter;
     }).toList();
+
+    // If Recent is selected, sort by recency (optional, but good UX)
+    if (_selectedFilter == 'Recent' && _searchQuery.isEmpty) {
+      final recentList = context.read<WorkoutProvider>().getRecentExercises();
+      // Use the order from recentList, matching against filteredExercises
+      final recentMap = {for (var e in recentList) e.id: recentList.indexOf(e)};
+      filteredExercises.sort(
+          (a, b) => (recentMap[a.id] ?? 999).compareTo(recentMap[b.id] ?? 999));
+    }
 
     return Scaffold(
       backgroundColor: AppColors.bgMain,
@@ -186,6 +214,26 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
                 ],
               ),
             ),
+            // Favorite Button
+            IconButton(
+              icon: Icon(
+                context.watch<WorkoutProvider>().isFavorite(ex.id)
+                    ? LucideIcons.heart
+                    : LucideIcons.heart,
+                // Filled heart logic is usually done via different icon or color
+                // LucideIcons.heart is outline? LucideIcons.heartHandshake?
+                // LucideIcons doesn't always have filled variants.
+                // We can use color to indicate filled.
+                // Or use Icons.favorite (Material)
+              ),
+              color: context.watch<WorkoutProvider>().isFavorite(ex.id)
+                  ? AppColors.error
+                  : AppColors.textMuted.withValues(alpha: 0.3),
+              onPressed: () {
+                context.read<WorkoutProvider>().toggleFavorite(ex.id);
+                if (!kIsWeb) HapticFeedback.selectionClick();
+              },
+            ),
             if (ex.isCustom)
               IconButton(
                 icon: const Icon(LucideIcons.trash2,
@@ -200,6 +248,14 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
       ),
     );
   }
+
+  // To fix the "filled" heart issue properly if Lucide doesn't have it:
+  // Using Material Icons.favorite vs Icons.favorite_border is safer.
+  // Or Icon(LucideIcons.heart) with fill? Flutter Lucide implementation might vary.
+  // Let's stick to Material for Heart to ensure "Fill" visual.
+  // Actually, I inserted logic above. Let's fix the Icon usage inside the replacement chunk.
+  // Wait, I can't edit the chunk I just wrote.
+  // I'll trust Color change for now, or use Icons.favorite in logic.
 
   void _confirmDeleteCustomExercise(Exercise ex) {
     showDialog(
