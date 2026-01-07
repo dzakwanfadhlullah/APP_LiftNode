@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../core/app_theme.dart';
 import '../core/shared_widgets.dart';
+import '../core/workout_provider.dart';
 
 // =============================================================================
 // PHASE 6: PROFILE SCREEN ENHANCEMENTS
@@ -243,10 +245,14 @@ class _ProfileScreenState extends State<ProfileScreen>
                     const Icon(LucideIcons.flame,
                         size: 16, color: Color(0xFFF97316)),
                     Spacing.hXs,
-                    Text(
-                      '12 Day Streak',
-                      style: AppTypography.bodyMedium
-                          .copyWith(color: AppColors.textSecondary),
+                    Consumer<WorkoutProvider>(
+                      builder: (context, provider, child) {
+                        return Text(
+                          '${provider.streak} Day Streak',
+                          style: AppTypography.bodyMedium
+                              .copyWith(color: AppColors.textSecondary),
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -308,48 +314,54 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildStatsGrid() {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final itemWidth = (constraints.maxWidth - 12) / 2;
-        return Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _StatCard(
-              label: 'Total Workouts',
-              value: '48',
-              icon: LucideIcons.dumbbell,
-              width: itemWidth,
-              color: AppColors.brandSecondary,
-              trend: '+12%',
-              trendUp: true,
-            ),
-            _StatCard(
-              label: 'PRs Set',
-              value: '12',
-              icon: LucideIcons.trophy,
-              width: itemWidth,
-              color: AppColors.brandPrimary,
-              trend: '+3',
-              trendUp: true,
-            ),
-            _StatCard(
-              label: 'Active Hours',
-              value: '156h',
-              icon: LucideIcons.clock,
-              width: itemWidth,
-              color: const Color(0xFF3B82F6),
-            ),
-            _StatCard(
-              label: 'Completion Rate',
-              value: '92%',
-              icon: LucideIcons.target,
-              width: itemWidth,
-              color: const Color(0xFFA855F7),
-              showProgress: true,
-              progressValue: 0.92,
-            ),
-          ],
+    return Consumer<WorkoutProvider>(
+      builder: (context, provider, child) {
+        final history = provider.history;
+        final totalWorkouts = history.length;
+        final totalPrs = history.fold<int>(0, (sum, w) => sum + w.prCount);
+        final totalMinutes = history.fold<int>(0, (sum, w) => sum + w.duration);
+        final activeHours = (totalMinutes / 60).toStringAsFixed(1);
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final itemWidth = (constraints.maxWidth - 12) / 2;
+            return Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                _StatCard(
+                  label: 'Total Workouts',
+                  value: '$totalWorkouts',
+                  icon: LucideIcons.dumbbell,
+                  width: itemWidth,
+                  color: AppColors.brandSecondary,
+                ),
+                _StatCard(
+                  label: 'PRs Set',
+                  value: '$totalPrs',
+                  icon: LucideIcons.trophy,
+                  width: itemWidth,
+                  color: AppColors.brandPrimary,
+                ),
+                _StatCard(
+                  label: 'Active Hours',
+                  value: '${activeHours}h',
+                  icon: LucideIcons.clock,
+                  width: itemWidth,
+                  color: const Color(0xFF3B82F6),
+                ),
+                _StatCard(
+                  label: 'Completion Rate',
+                  value: totalWorkouts > 0 ? '100%' : '0%',
+                  icon: LucideIcons.target,
+                  width: itemWidth,
+                  color: const Color(0xFFA855F7),
+                  showProgress: true,
+                  progressValue: totalWorkouts > 0 ? 1.0 : 0.0,
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -891,9 +903,52 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const GymDivider(height: 1),
           _buildAccountTile(
+            icon: LucideIcons.trash2,
+            title: 'Reset All History',
+            subtitle: 'This action cannot be undone',
+            color: AppColors.error,
+            onTap: () => _confirmResetHistory(context),
+          ),
+          const GymDivider(height: 1),
+          _buildAccountTile(
             icon: LucideIcons.logOut,
             title: 'Sign Out',
             color: AppColors.error,
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmResetHistory(BuildContext context) {
+    HapticFeedback.heavyImpact();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.bgCard,
+        title: const Text('Reset All History?',
+            style: AppTypography.headlineSmall),
+        content: const Text(
+          'Are you sure you want to delete all workout history? This will also reset your streaks and PRs. This action cannot be undone.',
+          style: AppTypography.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          TextButton(
+            onPressed: () {
+              context.read<WorkoutProvider>().clearHistory();
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('All history has been reset')),
+              );
+            },
+            child: const Text('Reset All',
+                style: TextStyle(
+                    color: AppColors.error, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -906,14 +961,16 @@ class _ProfileScreenState extends State<ProfileScreen>
     String? subtitle,
     Color? color,
     Widget? trailing,
+    VoidCallback? onTap,
   }) {
     return GestureDetector(
-      onTap: () {
-        if (!kIsWeb) HapticFeedback.lightImpact();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('$title coming soon!')),
-        );
-      },
+      onTap: onTap ??
+          () {
+            if (!kIsWeb) HapticFeedback.lightImpact();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('$title coming soon!')),
+            );
+          },
       child: Padding(
         padding: Spacing.paddingCard,
         child: Row(
@@ -963,8 +1020,6 @@ class _StatCard extends StatelessWidget {
   final IconData icon;
   final double width;
   final Color color;
-  final String? trend;
-  final bool trendUp;
   final bool showProgress;
   final double progressValue;
 
@@ -974,8 +1029,6 @@ class _StatCard extends StatelessWidget {
     required this.icon,
     required this.width,
     required this.color,
-    this.trend,
-    this.trendUp = true,
     this.showProgress = false,
     this.progressValue = 0,
   });
@@ -998,36 +1051,6 @@ class _StatCard extends StatelessWidget {
                 ),
                 child: Icon(icon, size: 18, color: color),
               ),
-              if (trend != null)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: (trendUp ? AppColors.success : AppColors.error)
-                        .withValues(alpha: 0.1),
-                    borderRadius: AppRadius.roundedXs,
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        trendUp
-                            ? LucideIcons.trendingUp
-                            : LucideIcons.trendingDown,
-                        size: 12,
-                        color: trendUp ? AppColors.success : AppColors.error,
-                      ),
-                      Spacing.hXxs,
-                      Text(
-                        trend!,
-                        style: AppTypography.caption.copyWith(
-                          color: trendUp ? AppColors.success : AppColors.error,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
             ],
           ),
           Spacing.vMd,

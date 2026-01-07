@@ -15,6 +15,7 @@ class WorkoutProvider with ChangeNotifier {
 
   List<ActiveExercise> _exercises = [];
   List<Exercise> _customExercises = [];
+  List<WorkoutHistory> _history = [];
   Timer? _timer;
   String? _errorMessage;
 
@@ -26,9 +27,41 @@ class WorkoutProvider with ChangeNotifier {
   String get elapsedTime => _elapsedTime;
   String get restElapsedTime => _restElapsedTime;
   bool get isResting => _restStartTime != null;
-  List<ActiveExercise> get exercises => _exercises;
-  List<Exercise> get customExercises => _customExercises;
+  List<ActiveExercise> get exercises => List.unmodifiable(_exercises);
+  List<Exercise> get customExercises => List.unmodifiable(_customExercises);
+  List<WorkoutHistory> get history => List.unmodifiable(_history);
   String? get errorMessage => _errorMessage;
+  int get streak => _calculateStreak();
+  WorkoutHistory? get lastSession =>
+      _history.isNotEmpty ? _history.first : null;
+
+  int _calculateStreak() {
+    if (_history.isEmpty) return 0;
+    // Simple streak calculation: count consecutive days starting from today or yesterday
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    var currentStreak = 0;
+
+    // Check if the most recent workout was today or yesterday
+    final firstWorkoutDate = DateTime(_history.first.date.year,
+        _history.first.date.month, _history.first.date.day);
+
+    if (firstWorkoutDate == today ||
+        firstWorkoutDate == today.subtract(const Duration(days: 1))) {
+      // Potentially in a streak
+      Set<DateTime> uniqueDates = _history
+          .map((w) => DateTime(w.date.year, w.date.month, w.date.day))
+          .toSet();
+
+      var checkDate = firstWorkoutDate;
+      while (uniqueDates.contains(checkDate)) {
+        currentStreak++;
+        checkDate = checkDate.subtract(const Duration(days: 1));
+      }
+    }
+
+    return currentStreak;
+  }
 
   void clearError() {
     _errorMessage = null;
@@ -45,6 +78,42 @@ class WorkoutProvider with ChangeNotifier {
   }
 
   void finishWorkout() {
+    if (_isActive && _exercises.isNotEmpty) {
+      final now = DateTime.now();
+      final startTime = DateTime.fromMillisecondsSinceEpoch(
+          _startTime ?? now.millisecondsSinceEpoch);
+      final duration = now.difference(startTime).inMinutes;
+
+      double totalVolume = 0;
+      List<String> exerciseNames = [];
+      Set<String> muscleGroups = {};
+
+      for (var ex in _exercises) {
+        exerciseNames.add(ex.name);
+        for (var set in ex.sets) {
+          if (set.completed) {
+            final kg = double.tryParse(set.kg) ?? 0;
+            final reps = int.tryParse(set.reps) ?? 0;
+            totalVolume += kg * reps;
+          }
+        }
+        // Simplified muscle group mapping
+        muscleGroups.add('Full Body');
+      }
+
+      final newHistory = WorkoutHistory(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        name: 'Workout on ${now.day}/${now.month}',
+        date: now,
+        duration: duration,
+        totalVolume: totalVolume,
+        exercises: exerciseNames,
+        muscleGroups: muscleGroups.toList(),
+      );
+
+      _history = [newHistory, ..._history];
+    }
+
     _isActive = false;
     _startTime = null;
     _restStartTime = null;
@@ -52,6 +121,18 @@ class WorkoutProvider with ChangeNotifier {
     _elapsedTime = '00:00';
     _restElapsedTime = '00:00';
     _exercises = [];
+    _saveState();
+    notifyListeners();
+  }
+
+  void clearHistory() {
+    _history = [];
+    _saveState();
+    notifyListeners();
+  }
+
+  void deleteHistoryEntry(String id) {
+    _history = _history.where((entry) => entry.id != id).toList();
     _saveState();
     notifyListeners();
   }
@@ -75,6 +156,11 @@ class WorkoutProvider with ChangeNotifier {
               .map((e) => Exercise.fromJson(e))
               .toList();
         }
+        if (decoded['history'] != null) {
+          _history = (decoded['history'] as List)
+              .map((e) => WorkoutHistory.fromJson(e))
+              .toList();
+        }
         if (_isActive) _startTimer();
       }
     } catch (e) {
@@ -93,6 +179,7 @@ class WorkoutProvider with ChangeNotifier {
         'restStartTime': _restStartTime,
         'exercises': _exercises.map((e) => e.toJson()).toList(),
         'customExercises': _customExercises.map((e) => e.toJson()).toList(),
+        'history': _history.map((e) => e.toJson()).toList(),
       });
       await prefs.setString('workout_state', data);
     } catch (e) {
@@ -146,13 +233,13 @@ class WorkoutProvider with ChangeNotifier {
       name: exercise.name,
       sets: [WorkoutSet(id: 's1', kg: '', reps: '', completed: false)],
     );
-    _exercises.add(newActive);
+    _exercises = [..._exercises, newActive];
     _saveState();
     notifyListeners();
   }
 
   void removeExercise(String id) {
-    _exercises.removeWhere((ex) => ex.id == id);
+    _exercises = _exercises.where((ex) => ex.id != id).toList();
     _saveState();
     notifyListeners();
   }
@@ -168,9 +255,11 @@ class WorkoutProvider with ChangeNotifier {
       completed: false,
     );
 
-    _exercises[exerciseIndex] = exercise.copyWith(
+    final newExercises = List<ActiveExercise>.from(_exercises);
+    newExercises[exerciseIndex] = exercise.copyWith(
       sets: [...exercise.sets, newSet],
     );
+    _exercises = newExercises;
     _saveState();
     notifyListeners();
   }
@@ -182,7 +271,9 @@ class WorkoutProvider with ChangeNotifier {
       reps: reps ?? sets[setIndex].reps,
     );
 
-    _exercises[exIndex] = _exercises[exIndex].copyWith(sets: sets);
+    final newExercises = List<ActiveExercise>.from(_exercises);
+    newExercises[exIndex] = _exercises[exIndex].copyWith(sets: sets);
+    _exercises = newExercises;
     _saveState();
     notifyListeners();
   }
@@ -192,7 +283,10 @@ class WorkoutProvider with ChangeNotifier {
     final isNowComplete = !sets[setIndex].completed;
 
     sets[setIndex] = sets[setIndex].copyWith(completed: isNowComplete);
-    _exercises[exIndex] = _exercises[exIndex].copyWith(sets: sets);
+
+    final newExercises = List<ActiveExercise>.from(_exercises);
+    newExercises[exIndex] = _exercises[exIndex].copyWith(sets: sets);
+    _exercises = newExercises;
 
     if (isNowComplete) {
       _restStartTime = DateTime.now().millisecondsSinceEpoch;

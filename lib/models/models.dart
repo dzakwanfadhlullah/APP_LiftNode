@@ -127,4 +127,48 @@ class ActiveExercise {
       );
 }
 
+class WorkoutHistory {
+  final String id;
+  final String name;
+  final DateTime date;
+  final int duration;
+  final double totalVolume;
+  final List<String> exercises;
+  final List<String> muscleGroups;
+  final int prCount;
+
+  WorkoutHistory({
+    required this.id,
+    required this.name,
+    required this.date,
+    required this.duration,
+    required this.totalVolume,
+    required this.exercises,
+    required this.muscleGroups,
+    this.prCount = 0,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'date': date.toIso8601String(),
+        'duration': duration,
+        'totalVolume': totalVolume,
+        'exercises': exercises,
+        'muscleGroups': muscleGroups,
+        'prCount': prCount,
+      };
+
+  factory WorkoutHistory.fromJson(Map<String, dynamic> json) => WorkoutHistory(
+        id: json['id'],
+        name: json['name'],
+        date: DateTime.parse(json['date']),
+        duration: json['duration'],
+        totalVolume: (json['totalVolume'] as num).toDouble(),
+        exercises: List<String>.from(json['exercises']),
+        muscleGroups: List<String>.from(json['muscleGroups']),
+        prCount: json['prCount'] ?? 0,
+      );
+}
+
 enum SetType { warmup, normal, failure }

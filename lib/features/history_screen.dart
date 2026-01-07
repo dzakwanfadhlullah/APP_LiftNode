@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import '../models/models.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
+import '../core/workout_provider.dart';
 import '../core/app_theme.dart';
 import '../core/shared_widgets.dart';
-import '../core/workout_provider.dart';
 
 // =============================================================================
 // PHASE 5: HISTORY SCREEN
@@ -20,16 +21,10 @@ class HistoryScreen extends StatefulWidget {
 
 class _HistoryScreenState extends State<HistoryScreen>
     with SingleTickerProviderStateMixin {
-  // 5.3 Search & Filters
   String _searchQuery = '';
   String _selectedFilter = 'All';
   DateTimeRange? _dateRange;
-
-  // Tab controller for stats
   late TabController _tabController;
-
-  // Mock workout history data
-  final List<WorkoutHistory> _workoutHistory = _generateMockHistory();
 
   @override
   void initState() {
@@ -45,7 +40,7 @@ class _HistoryScreenState extends State<HistoryScreen>
 
   @override
   Widget build(BuildContext context) {
-    final filteredWorkouts = _getFilteredWorkouts();
+    final filteredWorkouts = _getFilteredWorkouts(context);
 
     return Scaffold(
       backgroundColor: AppColors.bgMain,
@@ -53,16 +48,12 @@ class _HistoryScreenState extends State<HistoryScreen>
         child: Column(
           children: [
             _buildHeader(context),
-            // Tab bar
             _buildTabBar(),
-            // Tab content
             Expanded(
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  // Workouts tab
                   _buildWorkoutsTab(filteredWorkouts),
-                  // Stats tab
                   _buildStatsTab(),
                 ],
               ),
@@ -72,10 +63,6 @@ class _HistoryScreenState extends State<HistoryScreen>
       ),
     );
   }
-
-  // ===========================================================================
-  // HEADER
-  // ===========================================================================
 
   Widget _buildHeader(BuildContext context) {
     return Container(
@@ -103,7 +90,6 @@ class _HistoryScreenState extends State<HistoryScreen>
             ],
           ),
           Spacing.vMd,
-          // Search bar
           GymInput(
             hint: 'Search workouts...',
             prefixIcon: LucideIcons.search,
@@ -140,16 +126,11 @@ class _HistoryScreenState extends State<HistoryScreen>
     );
   }
 
-  // ===========================================================================
-  // 5.1 WORKOUT LIST VIEW
-  // ===========================================================================
-
   Widget _buildWorkoutsTab(List<WorkoutHistory> workouts) {
     if (workouts.isEmpty) {
       return _buildEmptyState();
     }
 
-    // Group workouts by date
     final groupedWorkouts = _groupByDate(workouts);
 
     return ListView.builder(
@@ -162,10 +143,8 @@ class _HistoryScreenState extends State<HistoryScreen>
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Date header
             _buildDateHeader(dateKey),
             Spacing.vSm,
-            // Workout cards for this date
             ...dayWorkouts.map((workout) => _WorkoutCard(
                   workout: workout,
                   onTap: () => _showWorkoutDetail(context, workout),
@@ -206,28 +185,26 @@ class _HistoryScreenState extends State<HistoryScreen>
   }
 
   Widget _buildEmptyState() {
-    return GymEmptyState(
-      icon: LucideIcons.dumbbell,
-      title: 'No Workouts Yet',
-      subtitle: _searchQuery.isNotEmpty
-          ? 'No workouts match your search.'
-          : 'Start your first workout to see your history here.',
-      action: _searchQuery.isEmpty
-          ? NeonButton(
-              title: 'Start Workout',
-              icon: LucideIcons.plus,
-              onPress: () {
-                Provider.of<WorkoutProvider>(context, listen: false)
-                    .startWorkout();
-              },
-            )
-          : null,
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: GymEmptyState(
+          icon: LucideIcons.calendarDays,
+          title: 'No workouts found',
+          subtitle: _searchQuery.isNotEmpty
+              ? 'No results for "$_searchQuery". Try a different search.'
+              : 'Your workout history will appear here once you complete a session.',
+          action: _searchQuery.isNotEmpty
+              ? NeonButton(
+                  title: 'Clear Search',
+                  variant: 'secondary',
+                  onPress: () => setState(() => _searchQuery = ''),
+                )
+              : null,
+        ),
+      ),
     );
   }
-
-  // ===========================================================================
-  // 5.2 WORKOUT DETAIL VIEW
-  // ===========================================================================
 
   void _showWorkoutDetail(BuildContext context, WorkoutHistory workout) {
     if (!kIsWeb) HapticFeedback.lightImpact();
@@ -267,10 +244,8 @@ class _HistoryScreenState extends State<HistoryScreen>
             variant: 'danger',
             size: ButtonSize.small,
             onPress: () {
+              context.read<WorkoutProvider>().deleteHistoryEntry(workout.id);
               Navigator.pop(context);
-              setState(() {
-                _workoutHistory.remove(workout);
-              });
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Workout deleted')),
               );
@@ -281,39 +256,24 @@ class _HistoryScreenState extends State<HistoryScreen>
     );
   }
 
-  // ===========================================================================
-  // 5.3 FILTERS & SEARCH
-  // ===========================================================================
-
-  List<WorkoutHistory> _getFilteredWorkouts() {
-    var workouts = _workoutHistory;
-
-    // Filter by search query
-    if (_searchQuery.isNotEmpty) {
-      workouts = workouts.where((w) {
-        return w.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-            w.exercises.any(
-                (e) => e.toLowerCase().contains(_searchQuery.toLowerCase()));
-      }).toList();
-    }
-
-    // Filter by muscle group
-    if (_selectedFilter != 'All') {
-      workouts = workouts.where((w) {
-        return w.muscleGroups.contains(_selectedFilter);
-      }).toList();
-    }
-
-    // Filter by date range
-    if (_dateRange != null) {
-      workouts = workouts.where((w) {
-        return w.date
+  List<WorkoutHistory> _getFilteredWorkouts(BuildContext context) {
+    final history = context.watch<WorkoutProvider>().history;
+    return history.where((workout) {
+      final matchesSearch = workout.name
+              .toLowerCase()
+              .contains(_searchQuery.toLowerCase()) ||
+          workout.exercises
+              .any((e) => e.toLowerCase().contains(_searchQuery.toLowerCase()));
+      final matchesFilter = _selectedFilter == 'All' ||
+          workout.muscleGroups.contains(_selectedFilter);
+      bool matchesDate = true;
+      if (_dateRange != null) {
+        matchesDate = workout.date
                 .isAfter(_dateRange!.start.subtract(const Duration(days: 1))) &&
-            w.date.isBefore(_dateRange!.end.add(const Duration(days: 1)));
-      }).toList();
-    }
-
-    return workouts;
+            workout.date.isBefore(_dateRange!.end.add(const Duration(days: 1)));
+      }
+      return matchesSearch && matchesFilter && matchesDate;
+    }).toList();
   }
 
   void _showDateRangePicker(BuildContext context) async {
@@ -336,10 +296,7 @@ class _HistoryScreenState extends State<HistoryScreen>
         );
       },
     );
-
-    if (picked != null) {
-      setState(() => _dateRange = picked);
-    }
+    if (picked != null) setState(() => _dateRange = picked);
   }
 
   void _showFilterSheet(BuildContext context) {
@@ -370,11 +327,9 @@ class _HistoryScreenState extends State<HistoryScreen>
   Map<String, List<WorkoutHistory>> _groupByDate(
       List<WorkoutHistory> workouts) {
     final grouped = <String, List<WorkoutHistory>>{};
-
     for (final workout in workouts) {
       final now = DateTime.now();
       final diff = now.difference(workout.date).inDays;
-
       String key;
       if (diff == 0) {
         key = 'Today';
@@ -387,26 +342,18 @@ class _HistoryScreenState extends State<HistoryScreen>
       } else {
         key = 'Earlier';
       }
-
       grouped.putIfAbsent(key, () => []).add(workout);
     }
-
     return grouped;
   }
 
-  // ===========================================================================
-  // 5.4 STATS SUMMARY
-  // ===========================================================================
-
   Widget _buildStatsTab() {
     final stats = _calculateStats();
-
     return SingleChildScrollView(
       padding: Spacing.paddingScreen,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Overview cards
           Row(
             children: [
               Expanded(
@@ -433,18 +380,15 @@ class _HistoryScreenState extends State<HistoryScreen>
             ],
           ),
           Spacing.vXl,
-          // Workout frequency
           const Text('Workout Frequency', style: AppTypography.headlineSmall),
           Spacing.vMd,
           _buildFrequencyChart(),
           Spacing.vXl,
-          // Most trained muscles
           const Text('Most Trained', style: AppTypography.headlineSmall),
           Spacing.vMd,
           _buildMuscleDistribution(
               stats['muscleDistribution'] as Map<String, int>),
           Spacing.vXl,
-          // Personal Records
           const Text('Recent PRs', style: AppTypography.headlineSmall),
           Spacing.vMd,
           _buildRecentPRs(),
@@ -473,58 +417,47 @@ class _HistoryScreenState extends State<HistoryScreen>
   }
 
   Widget _buildFrequencyChart() {
-    // Weekly frequency chart
     final weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final frequency = [2, 0, 3, 1, 2, 4, 1]; // Mock data
-
+    final frequency = [2, 0, 3, 1, 2, 4, 1];
     return GymCard(
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: List.generate(7, (i) {
-              final isToday = DateTime.now().weekday == i + 1;
-              return Column(
-                children: [
-                  Container(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: List.generate(7, (i) {
+          final isToday = DateTime.now().weekday == i + 1;
+          return Column(
+            children: [
+              Container(
+                width: 32,
+                height: 80,
+                decoration: const BoxDecoration(
+                    color: AppColors.bgCardHover,
+                    borderRadius: AppRadius.roundedSm),
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: AnimatedContainer(
+                    duration: AppAnimations.normal,
                     width: 32,
-                    height: 80,
-                    decoration: const BoxDecoration(
-                      color: AppColors.bgCardHover,
+                    height: (frequency[i] / 4) * 80,
+                    decoration: BoxDecoration(
+                      gradient:
+                          frequency[i] > 0 ? AppColors.gradientPrimary : null,
+                      color: frequency[i] == 0 ? AppColors.bgCardHover : null,
                       borderRadius: AppRadius.roundedSm,
                     ),
-                    child: Align(
-                      alignment: Alignment.bottomCenter,
-                      child: AnimatedContainer(
-                        duration: AppAnimations.normal,
-                        width: 32,
-                        height: (frequency[i] / 4) * 80,
-                        decoration: BoxDecoration(
-                          gradient: frequency[i] > 0
-                              ? AppColors.gradientPrimary
-                              : null,
-                          color:
-                              frequency[i] == 0 ? AppColors.bgCardHover : null,
-                          borderRadius: AppRadius.roundedSm,
-                        ),
-                      ),
-                    ),
                   ),
-                  Spacing.vSm,
-                  Text(
-                    weekDays[i],
-                    style: AppTypography.caption.copyWith(
-                      color: isToday
-                          ? AppColors.brandPrimary
-                          : AppColors.textMuted,
-                      fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                ],
-              );
-            }),
-          ),
-        ],
+                ),
+              ),
+              Spacing.vSm,
+              Text(
+                weekDays[i],
+                style: AppTypography.caption.copyWith(
+                  color: isToday ? AppColors.brandPrimary : AppColors.textMuted,
+                  fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ],
+          );
+        }),
       ),
     );
   }
@@ -533,11 +466,11 @@ class _HistoryScreenState extends State<HistoryScreen>
     final sorted = distribution.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
     final total = sorted.fold<int>(0, (sum, e) => sum + e.value);
-
     return GymCard(
       child: Column(
         children: sorted.take(5).map((entry) {
-          final percentage = (entry.value / total * 100).round();
+          final percentage =
+              total > 0 ? (entry.value / total * 100).round() : 0;
           return Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: Column(
@@ -552,9 +485,8 @@ class _HistoryScreenState extends State<HistoryScreen>
                 ),
                 Spacing.vXs,
                 GymProgressBar(
-                  value: percentage / 100,
-                  progressGradient: AppColors.gradientPrimary,
-                ),
+                    value: percentage / 100,
+                    progressGradient: AppColors.gradientPrimary),
               ],
             ),
           );
@@ -569,7 +501,6 @@ class _HistoryScreenState extends State<HistoryScreen>
       {'exercise': 'Squat', 'weight': '120kg', 'date': '5 days ago'},
       {'exercise': 'Deadlift', 'weight': '140kg', 'date': '1 week ago'},
     ];
-
     return Column(
       children: prs.map((pr) {
         return GymCard(
@@ -580,9 +511,8 @@ class _HistoryScreenState extends State<HistoryScreen>
                 width: 44,
                 height: 44,
                 decoration: const BoxDecoration(
-                  gradient: AppColors.gradientPrimary,
-                  borderRadius: AppRadius.roundedMd,
-                ),
+                    gradient: AppColors.gradientPrimary,
+                    borderRadius: AppRadius.roundedMd),
                 child: const Icon(LucideIcons.trophy,
                     size: 22, color: AppColors.brandPrimary),
               ),
@@ -600,9 +530,8 @@ class _HistoryScreenState extends State<HistoryScreen>
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: const BoxDecoration(
-                  color: AppColors.bgCardHover,
-                  borderRadius: AppRadius.roundedSm,
-                ),
+                    color: AppColors.bgCardHover,
+                    borderRadius: AppRadius.roundedSm),
                 child: Text(pr['weight']!, style: AppTypography.statSmall),
               ),
             ],
@@ -613,24 +542,21 @@ class _HistoryScreenState extends State<HistoryScreen>
   }
 
   Map<String, dynamic> _calculateStats() {
-    final totalWorkouts = _workoutHistory.length;
+    final history = context.watch<WorkoutProvider>().history;
+    final totalWorkouts = history.length;
     final totalVolume =
-        _workoutHistory.fold<double>(0, (sum, w) => sum + w.totalVolume);
+        history.fold<double>(0, (sum, w) => sum + w.totalVolume);
     final avgDuration = totalWorkouts > 0
-        ? (_workoutHistory.fold<int>(0, (sum, w) => sum + w.duration) /
-                totalWorkouts)
+        ? (history.fold<int>(0, (sum, w) => sum + w.duration) / totalWorkouts)
             .round()
         : 0;
-    final prCount = _workoutHistory.fold<int>(0, (sum, w) => sum + w.prCount);
-
-    // Muscle distribution
+    final prCount = history.fold<int>(0, (sum, w) => sum + w.prCount);
     final muscleDistribution = <String, int>{};
-    for (final workout in _workoutHistory) {
+    for (final workout in history) {
       for (final muscle in workout.muscleGroups) {
         muscleDistribution[muscle] = (muscleDistribution[muscle] ?? 0) + 1;
       }
     }
-
     return {
       'totalWorkouts': totalWorkouts,
       'totalVolume': totalVolume,
@@ -641,20 +567,12 @@ class _HistoryScreenState extends State<HistoryScreen>
   }
 }
 
-// =============================================================================
-// WORKOUT CARD WIDGET
-// =============================================================================
-
 class _WorkoutCard extends StatelessWidget {
   final WorkoutHistory workout;
   final VoidCallback onTap;
   final VoidCallback onDelete;
-
-  const _WorkoutCard({
-    required this.workout,
-    required this.onTap,
-    required this.onDelete,
-  });
+  const _WorkoutCard(
+      {required this.workout, required this.onTap, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
@@ -672,15 +590,13 @@ class _WorkoutCard extends StatelessWidget {
                 'Are you sure you want to delete this workout? This action cannot be undone.'),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel',
-                    style: TextStyle(color: AppColors.textSecondary)),
-              ),
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel',
+                      style: TextStyle(color: AppColors.textSecondary))),
               TextButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Delete',
-                    style: TextStyle(color: AppColors.error)),
-              ),
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Delete',
+                      style: TextStyle(color: AppColors.error))),
             ],
           ),
         );
@@ -689,9 +605,7 @@ class _WorkoutCard extends StatelessWidget {
       background: Container(
         margin: const EdgeInsets.only(bottom: 12),
         decoration: const BoxDecoration(
-          color: AppColors.error,
-          borderRadius: AppRadius.roundedLg,
-        ),
+            color: AppColors.error, borderRadius: AppRadius.roundedLg),
         alignment: Alignment.centerRight,
         padding: const EdgeInsets.only(right: 20),
         child: const Icon(LucideIcons.trash2, color: Colors.white),
@@ -701,19 +615,16 @@ class _WorkoutCard extends StatelessWidget {
         onTap: onTap,
         child: Row(
           children: [
-            // Icon
             Container(
               width: 50,
               height: 50,
               decoration: const BoxDecoration(
-                gradient: AppColors.gradientPrimary,
-                borderRadius: AppRadius.roundedMd,
-              ),
+                  gradient: AppColors.gradientPrimary,
+                  borderRadius: AppRadius.roundedMd),
               child: const Icon(LucideIcons.dumbbell,
                   size: 24, color: AppColors.brandPrimary),
             ),
             Spacing.hMd,
-            // Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -724,29 +635,24 @@ class _WorkoutCard extends StatelessWidget {
                       if (workout.prCount > 0) ...[
                         Spacing.hSm,
                         GymBadge.solid(
-                          text: '${workout.prCount} PR',
-                          color: AppColors.brandSecondary,
-                        ),
+                            text: '${workout.prCount} PR',
+                            color: AppColors.brandSecondary),
                       ],
                     ],
                   ),
                   Spacing.vXxs,
                   Text(
-                    '${workout.exercises.length} exercises • ${workout.duration} min',
-                    style: AppTypography.caption
-                        .copyWith(color: AppColors.textMuted),
-                  ),
+                      '${workout.exercises.length} exercises • ${workout.duration} min',
+                      style: AppTypography.caption
+                          .copyWith(color: AppColors.textMuted)),
                 ],
               ),
             ),
-            // Volume
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  '${(workout.totalVolume / 1000).toStringAsFixed(1)}k',
-                  style: AppTypography.statSmall,
-                ),
+                Text('${(workout.totalVolume / 1000).toStringAsFixed(1)}k',
+                    style: AppTypography.statSmall),
                 const Text('kg', style: AppTypography.caption),
               ],
             ),
@@ -757,13 +663,8 @@ class _WorkoutCard extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// WORKOUT DETAIL SHEET
-// =============================================================================
-
 class _WorkoutDetailSheet extends StatelessWidget {
   final WorkoutHistory workout;
-
   const _WorkoutDetailSheet({required this.workout});
 
   @override
@@ -773,17 +674,13 @@ class _WorkoutDetailSheet extends StatelessWidget {
       padding: Spacing.paddingCard,
       child: Column(
         children: [
-          // Handle
           Container(
-            width: 40,
-            height: 4,
-            decoration: const BoxDecoration(
-              color: AppColors.border,
-              borderRadius: AppRadius.roundedFull,
-            ),
-          ),
+              width: 40,
+              height: 4,
+              decoration: const BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: AppRadius.roundedFull)),
           Spacing.vLg,
-          // Header
           Row(
             children: [
               Expanded(
@@ -792,22 +689,16 @@ class _WorkoutDetailSheet extends StatelessWidget {
                   children: [
                     Text(workout.name, style: AppTypography.displayMedium),
                     Spacing.vXxs,
-                    Text(
-                      _formatDate(workout.date),
-                      style: AppTypography.bodyMedium
-                          .copyWith(color: AppColors.textSecondary),
-                    ),
+                    Text(_formatDate(workout.date),
+                        style: AppTypography.bodyMedium
+                            .copyWith(color: AppColors.textSecondary)),
                   ],
                 ),
               ),
-              NeonButton.icon(
-                icon: LucideIcons.share2,
-                onPress: () {},
-              ),
+              NeonButton.icon(icon: LucideIcons.share2, onPress: () {}),
             ],
           ),
           Spacing.vLg,
-          // Stats row
           Row(
             children: [
               _buildDetailStat(
@@ -825,35 +716,24 @@ class _WorkoutDetailSheet extends StatelessWidget {
           Spacing.vLg,
           const GymDivider(),
           Spacing.vMd,
-          // Exercises list
           Expanded(
             child: ListView.builder(
               itemCount: workout.exercises.length,
-              itemBuilder: (context, index) {
-                final exercise = workout.exercises[index];
-                return _buildExerciseItem(exercise, index);
-              },
+              itemBuilder: (context, index) =>
+                  _buildExerciseItem(workout.exercises[index], index),
             ),
           ),
-          // Actions
           Spacing.vMd,
-          Row(
-            children: [
-              Expanded(
-                child: NeonButton(
-                  title: 'Repeat Workout',
-                  variant: 'secondary',
-                  icon: LucideIcons.repeat,
-                  onPress: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Repeat workout coming soon!')),
-                    );
-                  },
-                ),
-              ),
-            ],
+          NeonButton(
+            title: 'Repeat Workout',
+            variant: 'secondary',
+            width: double.infinity,
+            icon: LucideIcons.repeat,
+            onPress: () {
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Repeat workout coming soon!')));
+            },
           ),
         ],
       ),
@@ -884,17 +764,13 @@ class _WorkoutDetailSheet extends StatelessWidget {
             width: 28,
             height: 28,
             decoration: const BoxDecoration(
-              color: AppColors.bgCardHover,
-              borderRadius: AppRadius.roundedXs,
-            ),
+                color: AppColors.bgCardHover,
+                borderRadius: AppRadius.roundedXs),
             child: Center(
-              child: Text('${index + 1}', style: AppTypography.labelMedium),
-            ),
+                child: Text('${index + 1}', style: AppTypography.labelMedium)),
           ),
           Spacing.hMd,
-          Expanded(
-            child: Text(exercise, style: AppTypography.bodyMedium),
-          ),
+          Expanded(child: Text(exercise, style: AppTypography.bodyMedium)),
           const Icon(LucideIcons.chevronRight,
               size: 16, color: AppColors.textMuted),
         ],
@@ -930,52 +806,55 @@ class _WorkoutDetailSheet extends StatelessWidget {
   }
 }
 
-// =============================================================================
-// FILTER SHEET
-// =============================================================================
-
 class _FilterSheet extends StatelessWidget {
   final String selectedFilter;
   final DateTimeRange? dateRange;
   final Function(String) onFilterChanged;
   final VoidCallback onClearFilters;
-
-  const _FilterSheet({
-    required this.selectedFilter,
-    this.dateRange,
-    required this.onFilterChanged,
-    required this.onClearFilters,
-  });
+  const _FilterSheet(
+      {required this.selectedFilter,
+      this.dateRange,
+      required this.onFilterChanged,
+      required this.onClearFilters});
 
   @override
   Widget build(BuildContext context) {
     final filters = [
       'All',
+      'Abdominals',
+      'Abductors',
+      'Adductors',
+      'Biceps',
+      'Calves',
+      'Cardio',
       'Chest',
-      'Back',
-      'Legs',
-      'Arms',
+      'Forearms',
+      'Full Body',
+      'Glutes',
+      'Hamstrings',
+      'Lats',
+      'Lower Back',
+      'Neck',
+      'Obliques',
+      'Quadriceps',
       'Shoulders',
-      'Core'
+      'Traps',
+      'Triceps',
+      'Upper Back',
     ];
-
     return Container(
       padding: Spacing.paddingCard,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Handle
           Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: const BoxDecoration(
-                color: AppColors.border,
-                borderRadius: AppRadius.roundedFull,
-              ),
-            ),
-          ),
+              child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: const BoxDecoration(
+                      color: AppColors.border,
+                      borderRadius: AppRadius.roundedFull))),
           Spacing.vLg,
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -983,10 +862,9 @@ class _FilterSheet extends StatelessWidget {
               const Text('Filter By Muscle Group',
                   style: AppTypography.headlineSmall),
               TextButton(
-                onPressed: onClearFilters,
-                child: const Text('Clear All',
-                    style: TextStyle(color: AppColors.error)),
-              ),
+                  onPressed: onClearFilters,
+                  child: const Text('Clear All',
+                      style: TextStyle(color: AppColors.error))),
             ],
           ),
           Spacing.vMd,
@@ -1006,19 +884,15 @@ class _FilterSheet extends StatelessWidget {
                         : AppColors.bgCardHover,
                     borderRadius: AppRadius.roundedFull,
                     border: Border.all(
-                      color: isSelected
-                          ? AppColors.brandPrimary
-                          : AppColors.border,
-                    ),
+                        color: isSelected
+                            ? AppColors.brandPrimary
+                            : AppColors.border),
                   ),
-                  child: Text(
-                    filter,
-                    style: AppTypography.labelMedium.copyWith(
-                      color: isSelected
-                          ? AppColors.onPrimary
-                          : AppColors.textPrimary,
-                    ),
-                  ),
+                  child: Text(filter,
+                      style: AppTypography.labelMedium.copyWith(
+                          color: isSelected
+                              ? AppColors.onPrimary
+                              : AppColors.textPrimary)),
                 ),
               );
             }).toList(),
@@ -1028,110 +902,4 @@ class _FilterSheet extends StatelessWidget {
       ),
     );
   }
-}
-
-// =============================================================================
-// DATA MODELS & MOCK DATA
-// =============================================================================
-
-class WorkoutHistory {
-  final String id;
-  final String name;
-  final DateTime date;
-  final int duration;
-  final double totalVolume;
-  final List<String> exercises;
-  final List<String> muscleGroups;
-  final int prCount;
-
-  WorkoutHistory({
-    required this.id,
-    required this.name,
-    required this.date,
-    required this.duration,
-    required this.totalVolume,
-    required this.exercises,
-    required this.muscleGroups,
-    this.prCount = 0,
-  });
-}
-
-List<WorkoutHistory> _generateMockHistory() {
-  return [
-    WorkoutHistory(
-      id: '1',
-      name: 'Push Day A',
-      date: DateTime.now().subtract(const Duration(hours: 2)),
-      duration: 52,
-      totalVolume: 4280,
-      exercises: [
-        'Bench Press',
-        'Incline DB Press',
-        'Cable Fly',
-        'Tricep Pushdown',
-        'Overhead Extension'
-      ],
-      muscleGroups: ['Chest', 'Shoulders', 'Arms'],
-      prCount: 1,
-    ),
-    WorkoutHistory(
-      id: '2',
-      name: 'Pull Day',
-      date: DateTime.now().subtract(const Duration(days: 1)),
-      duration: 48,
-      totalVolume: 5120,
-      exercises: [
-        'Deadlift',
-        'Barbell Row',
-        'Lat Pulldown',
-        'Face Pull',
-        'Bicep Curl'
-      ],
-      muscleGroups: ['Back', 'Arms'],
-      prCount: 2,
-    ),
-    WorkoutHistory(
-      id: '3',
-      name: 'Leg Day',
-      date: DateTime.now().subtract(const Duration(days: 3)),
-      duration: 65,
-      totalVolume: 8450,
-      exercises: [
-        'Squat',
-        'Leg Press',
-        'Romanian DL',
-        'Leg Curl',
-        'Calf Raise'
-      ],
-      muscleGroups: ['Legs'],
-      prCount: 1,
-    ),
-    WorkoutHistory(
-      id: '4',
-      name: 'Push Day B',
-      date: DateTime.now().subtract(const Duration(days: 5)),
-      duration: 45,
-      totalVolume: 3890,
-      exercises: ['OHP', 'DB Shoulder Press', 'Lateral Raise', 'Tricep Dips'],
-      muscleGroups: ['Shoulders', 'Arms'],
-    ),
-    WorkoutHistory(
-      id: '5',
-      name: 'Back & Bis',
-      date: DateTime.now().subtract(const Duration(days: 8)),
-      duration: 55,
-      totalVolume: 4650,
-      exercises: ['Pull-ups', 'Seated Row', 'Reverse Fly', 'Hammer Curl'],
-      muscleGroups: ['Back', 'Arms'],
-    ),
-    WorkoutHistory(
-      id: '6',
-      name: 'Full Body',
-      date: DateTime.now().subtract(const Duration(days: 14)),
-      duration: 70,
-      totalVolume: 6200,
-      exercises: ['Squat', 'Bench Press', 'Deadlift', 'Pull-ups', 'OHP'],
-      muscleGroups: ['Legs', 'Chest', 'Back', 'Shoulders'],
-    ),
-  ];
 }

@@ -22,13 +22,26 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
 
   final List<String> _muscles = [
     'All',
+    'Abdominals',
+    'Abductors',
+    'Adductors',
+    'Biceps',
+    'Calves',
+    'Cardio',
     'Chest',
-    'Back',
-    'Legs',
+    'Forearms',
+    'Full Body',
+    'Glutes',
+    'Hamstrings',
+    'Lats',
+    'Lower Back',
+    'Neck',
+    'Obliques',
+    'Quadriceps',
     'Shoulders',
-    'Arms',
-    'Abs',
-    'Cardio'
+    'Traps',
+    'Triceps',
+    'Upper Back',
   ];
 
   @override
@@ -295,16 +308,16 @@ class _ExerciseDetailSheet extends StatelessWidget {
           const Text('Description', style: AppTypography.titleMedium),
           Spacing.vSm,
           Text(
-            'Latihan ini fokus pada otot ${exercise.muscle}. Pastikan untuk menjaga form yang benar dan lakukan pemanasan sebelum memulai beban berat.',
+            'This exercise focuses on the ${exercise.muscle} muscles. Ensure you maintain proper form and perform a warm-up before lifting heavy weights.',
             style: AppTypography.bodyMedium
                 .copyWith(color: AppColors.textSecondary),
           ),
           Spacing.vLg,
           const Text('Tips', style: AppTypography.titleMedium),
           Spacing.vSm,
-          _buildTip('Pernapasan teratur saat melakukan gerakan.'),
-          _buildTip('Gunakan beban yang sesuai dengan kemampuan.'),
-          _buildTip('Fokus pada muscle-mind connection.'),
+          _buildTip('Maintain steady breathing during the movement.'),
+          _buildTip('Use weights appropriate for your fitness level.'),
+          _buildTip('Focus on the mind-muscle connection.'),
           const Spacer(),
           Selector<WorkoutProvider, bool>(
             selector: (_, p) => p.isActive,
@@ -426,13 +439,26 @@ class _CustomExerciseSheetState extends State<_CustomExerciseSheet> {
             spacing: 8,
             runSpacing: 8,
             children: [
+              'Abdominals',
+              'Abductors',
+              'Adductors',
+              'Biceps',
+              'Calves',
+              'Cardio',
               'Chest',
-              'Back',
-              'Legs',
+              'Forearms',
+              'Full Body',
+              'Glutes',
+              'Hamstrings',
+              'Lats',
+              'Lower Back',
+              'Neck',
+              'Obliques',
+              'Quadriceps',
               'Shoulders',
-              'Arms',
-              'Abs',
-              'Cardio'
+              'Traps',
+              'Triceps',
+              'Upper Back',
             ].map((muscle) {
               final isSelected = _selectedMuscle == muscle;
               return GestureDetector(

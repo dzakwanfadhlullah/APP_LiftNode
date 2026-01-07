@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
 import 'core/app_theme.dart';
 import 'core/workout_provider.dart';
 import 'core/shared_widgets.dart';
@@ -67,14 +69,17 @@ class _MainScaffoldState extends State<MainScaffold> {
           ? const WorkoutLoggerScreen()
           : Stack(
               children: [
-                IndexedStack(
-                  index: _currentIndex,
-                  children: const [
-                    HomeScreen(),
-                    HistoryScreen(),
-                    ExerciseLibraryScreen(),
-                    ProfileScreen(),
-                  ],
+                AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  child: KeyedSubtree(
+                    key: ValueKey(_currentIndex),
+                    child: <Widget>[
+                      const HomeScreen(),
+                      const HistoryScreen(),
+                      const ExerciseLibraryScreen(),
+                      const ProfileScreen(),
+                    ][_currentIndex],
+                  ),
                 ),
                 Positioned(
                   bottom: 0,
@@ -110,7 +115,10 @@ class _MainScaffoldState extends State<MainScaffold> {
   Widget _buildTabItem(IconData icon, String label, int index) {
     final isActive = _currentIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
+      onTap: () {
+        if (!kIsWeb) HapticFeedback.selectionClick();
+        setState(() => _currentIndex = index);
+      },
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [

@@ -3,10 +3,10 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../core/app_theme.dart';
 import '../core/shared_widgets.dart';
-import '../core/constants.dart';
 import '../core/workout_provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:fl_chart/fl_chart.dart';
+import '../models/models.dart';
 
 // =============================================================================
 // PHASE 3: HOME SCREEN ENHANCEMENTS
@@ -20,25 +20,12 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  late AnimationController _counterController;
-  late Animation<double> _counterAnimation;
-
   // 3.3 Chart period toggle
   String _chartPeriod = 'week'; // 'week' or 'month'
 
   @override
   void initState() {
     super.initState();
-    // 3.2 Animated counters on first load
-    _counterController = AnimationController(
-      duration: const Duration(milliseconds: 1500),
-      vsync: this,
-    );
-    _counterAnimation = CurvedAnimation(
-      parent: _counterController,
-      curve: Curves.easeOutCubic,
-    );
-    _counterController.forward();
 
     // 9.2 Data Resilience - Error Listener
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -59,12 +46,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         }
       });
     });
-  }
-
-  @override
-  void dispose() {
-    _counterController.dispose();
-    super.dispose();
   }
 
   @override
@@ -168,11 +149,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           children: [
             const Icon(LucideIcons.flame, size: 18, color: Color(0xFFF97316)),
             Spacing.hXs,
-            ListenableBuilder(
-              listenable: _counterAnimation,
-              builder: (context, child) {
+            Consumer<WorkoutProvider>(
+              builder: (context, provider, child) {
                 return Text(
-                  '${(12 * _counterAnimation.value).round()} Day',
+                  '${provider.streak} Day',
                   style: AppTypography.labelMedium.copyWith(
                     color: const Color(0xFFF97316),
                   ),
@@ -198,34 +178,50 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 40,
-              height: 4,
-              decoration: const BoxDecoration(
-                color: AppColors.border,
-                borderRadius: AppRadius.roundedFull,
-              ),
+            Consumer<WorkoutProvider>(
+              builder: (context, provider, child) {
+                final streak = provider.streak;
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: const BoxDecoration(
+                        color: AppColors.border,
+                        borderRadius: AppRadius.roundedFull,
+                      ),
+                    ),
+                    Spacing.vLg,
+                    const Icon(LucideIcons.flame,
+                        size: 64, color: Color(0xFFF97316)),
+                    Spacing.vMd,
+                    Text('$streak Day Streak! 🔥',
+                        style: AppTypography.displayMedium),
+                    Spacing.vSm,
+                    Text(
+                      streak > 0
+                          ? 'Keep it up! You\'re on fire.'
+                          : 'Start your first workout today!',
+                      style: AppTypography.bodyMedium
+                          .copyWith(color: AppColors.textSecondary),
+                    ),
+                    Spacing.vLg,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildStreakStat(
+                            'Current', '$streak', Icons.local_fire_department),
+                        _buildStreakStat('Best', '$streak', Icons.emoji_events),
+                        _buildStreakStat('Total', '${provider.history.length}',
+                            Icons.fitness_center),
+                      ],
+                    ),
+                    Spacing.vXl,
+                  ],
+                );
+              },
             ),
-            Spacing.vLg,
-            const Icon(LucideIcons.flame, size: 64, color: Color(0xFFF97316)),
-            Spacing.vMd,
-            const Text('12 Day Streak! 🔥', style: AppTypography.displayMedium),
-            Spacing.vSm,
-            Text(
-              'Keep it up! You\'re on fire.',
-              style: AppTypography.bodyMedium
-                  .copyWith(color: AppColors.textSecondary),
-            ),
-            Spacing.vLg,
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _buildStreakStat('Current', '12', Icons.local_fire_department),
-                _buildStreakStat('Best', '21', Icons.emoji_events),
-                _buildStreakStat('Total', '89', Icons.fitness_center),
-              ],
-            ),
-            Spacing.vXl,
           ],
         ),
       ),
@@ -468,59 +464,83 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildLastSessionCard(BuildContext context, double width) {
-    return GymCard(
-      width: width,
-      onTap: () => _showSessionDetails(context),
-      child: SizedBox(
-        height: 160,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'LAST SESSION',
-                  style: AppTypography.overline
-                      .copyWith(color: AppColors.textSecondary),
-                ),
-                const Icon(LucideIcons.history,
-                    size: 14, color: AppColors.brandSecondary),
-              ],
+    return Consumer<WorkoutProvider>(
+      builder: (context, provider, child) {
+        final lastSession = provider.lastSession;
+        if (lastSession == null) {
+          return GymCard(
+            width: width,
+            child: SizedBox(
+              height: 160,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(LucideIcons.history,
+                      size: 32, color: AppColors.textMuted),
+                  Spacing.vSm,
+                  Text('No Sessions',
+                      style: AppTypography.bodySmall
+                          .copyWith(color: AppColors.textMuted)),
+                ],
+              ),
             ),
-            Spacing.vSm,
-            const Text('Push Day A', style: AppTypography.headlineSmall),
-            Spacing.vXxs,
-            // Animated stat counter
-            ListenableBuilder(
-              listenable: _counterAnimation,
-              builder: (context, child) {
-                return Text(
-                  'Best: Bench ${(80 * _counterAnimation.value).round()}kg',
+          );
+        }
+
+        return GymCard(
+          width: width,
+          onTap: () => _showSessionDetails(context, lastSession),
+          child: SizedBox(
+            height: 160,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'LAST SESSION',
+                      style: AppTypography.overline
+                          .copyWith(color: AppColors.textSecondary),
+                    ),
+                    const Icon(LucideIcons.history,
+                        size: 14, color: AppColors.brandSecondary),
+                  ],
+                ),
+                Spacing.vSm,
+                Text(lastSession.name,
+                    style: AppTypography.headlineSmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                Spacing.vXxs,
+                Text(
+                  'Vol: ${lastSession.totalVolume.round()}kg',
                   style: AppTypography.bodySmall
                       .copyWith(color: AppColors.textSecondary),
-                );
-              },
-            ),
-            const Spacer(),
-            Row(
-              children: [
-                const GymBadge(text: 'PR', color: AppColors.brandSecondary),
-                Spacing.hXs,
-                Text(
-                  '45 min',
-                  style: AppTypography.caption
-                      .copyWith(color: AppColors.textMuted),
+                ),
+                const Spacer(),
+                Row(
+                  children: [
+                    if (lastSession.prCount > 0)
+                      const GymBadge(
+                          text: 'PR', color: AppColors.brandSecondary),
+                    if (lastSession.prCount > 0) Spacing.hXs,
+                    Text(
+                      '${lastSession.duration} min',
+                      style: AppTypography.caption
+                          .copyWith(color: AppColors.textMuted),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
-  void _showSessionDetails(BuildContext context) {
+  void _showSessionDetails(BuildContext context, WorkoutHistory session) {
     HapticFeedback.lightImpact();
     showModalBottomSheet(
       context: context,
@@ -550,33 +570,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
               ),
               Spacing.vLg,
-              const Text('Push Day A', style: AppTypography.displayMedium),
+              Text(session.name, style: AppTypography.displayMedium),
               Spacing.vXs,
               Text(
-                'Yesterday • 45 minutes',
+                '${_formatDate(session.date)} • ${session.duration} minutes',
                 style: AppTypography.bodyMedium
                     .copyWith(color: AppColors.textSecondary),
               ),
               Spacing.vLg,
-              _buildSessionStatRow('Total Volume', '4,280 kg'),
-              _buildSessionStatRow('Exercises', '5'),
-              _buildSessionStatRow('Sets', '18'),
-              _buildSessionStatRow('Best Lift', 'Bench Press 80kg'),
+              _buildSessionStatRow(
+                  'Total Volume', '${session.totalVolume.round()} kg'),
+              _buildSessionStatRow('Exercises', '${session.exercises.length}'),
+              _buildSessionStatRow('PRs Set', '${session.prCount}'),
               Spacing.vLg,
               const GymDivider(),
               Spacing.vMd,
               const Text('Exercises', style: AppTypography.titleLarge),
               Spacing.vMd,
-              _buildExerciseItem('Bench Press', '4 sets • 60-80kg'),
-              _buildExerciseItem('Incline DB Press', '3 sets • 25-30kg'),
-              _buildExerciseItem('Cable Fly', '4 sets • 15-20kg'),
-              _buildExerciseItem('Tricep Pushdown', '4 sets • 25-35kg'),
-              _buildExerciseItem('Overhead Extension', '3 sets • 20-25kg'),
+              ...session.exercises
+                  .map((name) => _buildExerciseItem(name, 'Completed')),
             ],
           ),
         ),
       ),
     );
+  }
+
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    if (diff.inDays == 0) return 'Today';
+    if (diff.inDays == 1) return 'Yesterday';
+    return '${date.day}/${date.month}/${date.year}';
   }
 
   Widget _buildSessionStatRow(String label, String value) {
@@ -627,58 +652,58 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // ===========================================================================
 
   Widget _buildRecentHistory(BuildContext context) {
-    final history = List<Map<String, String>>.from(AppConstants.mockHistory);
+    return Consumer<WorkoutProvider>(
+      builder: (context, provider, child) {
+        final history = provider.history.take(5).toList();
 
-    return Padding(
-      padding: Spacing.paddingScreen,
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return Padding(
+          padding: Spacing.paddingScreen,
+          child: Column(
             children: [
-              const Text('Recent History', style: AppTypography.headlineSmall),
-              TextButton.icon(
-                onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('History page coming soon!')),
-                ),
-                icon: const Icon(LucideIcons.arrowRight, size: 16),
-                label: Text(
-                  'VIEW ALL',
-                  style: AppTypography.labelSmall
-                      .copyWith(color: AppColors.brandPrimary),
-                ),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Recent History',
+                      style: AppTypography.headlineSmall),
+                  TextButton.icon(
+                    onPressed: () {
+                      // Navigate to history tab via main scaffold if possible,
+                      // but here we just show a message since we are a sub-page.
+                      // Actually, it's better to just keep it as is or show info.
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Switch to History tab to see all')),
+                      );
+                    },
+                    icon: const Icon(LucideIcons.arrowRight, size: 16),
+                    label: Text(
+                      'VIEW ALL',
+                      style: AppTypography.labelSmall
+                          .copyWith(color: AppColors.brandPrimary),
+                    ),
+                  ),
+                ],
               ),
+              Spacing.vMd,
+              if (history.isEmpty)
+                _buildEmptyHistory()
+              else
+                ...history.map((workout) {
+                  return _HistoryItem(
+                    key: ValueKey(workout.id),
+                    workout: workout,
+                    onDismissed: () {
+                      provider.deleteHistoryEntry(workout.id);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Workout deleted')),
+                      );
+                    },
+                  );
+                }),
             ],
           ),
-          Spacing.vMd,
-          if (history.isEmpty)
-            _buildEmptyHistory()
-          else
-            ...history.asMap().entries.map((entry) {
-              final index = entry.key;
-              final item = entry.value;
-              return _HistoryItem(
-                key: ValueKey(item['name']! + item['date']!),
-                item: item,
-                index: index,
-                onDismissed: () {
-                  // Handle delete
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${item['name']} deleted'),
-                      action: SnackBarAction(
-                        label: 'UNDO',
-                        onPressed: () {
-                          // Undo logic
-                        },
-                      ),
-                    ),
-                  );
-                },
-              );
-            }),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -703,14 +728,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 // =============================================================================
 
 class _HistoryItem extends StatelessWidget {
-  final Map<String, String> item;
-  final int index;
+  final WorkoutHistory workout;
   final VoidCallback onDismissed;
 
   const _HistoryItem({
     super.key,
-    required this.item,
-    required this.index,
+    required this.workout,
     required this.onDismissed,
   });
 
@@ -754,10 +777,10 @@ class _HistoryItem extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(item['name']!, style: AppTypography.titleMedium),
+                    Text(workout.name, style: AppTypography.titleMedium),
                     Spacing.vXxs,
                     Text(
-                      item['date']!,
+                      _formatDate(workout.date),
                       style: AppTypography.caption
                           .copyWith(color: AppColors.textMuted),
                     ),
@@ -768,7 +791,7 @@ class _HistoryItem extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    item['volume']!,
+                    '${workout.totalVolume.round()} kg',
                     style: AppTypography.statSmall.copyWith(fontSize: 16),
                   ),
                   Spacing.vXxs,
@@ -786,10 +809,18 @@ class _HistoryItem extends StatelessWidget {
     );
   }
 
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final diff = now.difference(date);
+    if (diff.inDays == 0) return 'Today';
+    if (diff.inDays == 1) return 'Yesterday';
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
   void _showHistoryDetails(BuildContext context) {
     HapticFeedback.lightImpact();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${item['name']} details coming soon!')),
+      SnackBar(content: Text('${workout.name} details coming soon!')),
     );
   }
 }
@@ -805,84 +836,101 @@ class _VolumeChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final weeklyValues = [40.0, 60.0, 30.0, 80.0, 50.0, 90.0, 20.0];
-    final monthlyValues = [
-      60.0,
-      45.0,
-      70.0,
-      55.0,
-      80.0,
-      65.0,
-      90.0,
-      75.0,
-      50.0,
-      85.0,
-      70.0,
-      95.0
-    ];
+    return Consumer<WorkoutProvider>(
+      builder: (context, provider, child) {
+        final history = provider.history;
+        final List<double> values;
 
-    final values = period == 'week' ? weeklyValues : monthlyValues;
-    final maxY = values.reduce((a, b) => a > b ? a : b) * 1.2;
+        if (period == 'week') {
+          // Last 7 days
+          values = List.generate(7, (i) {
+            final date = DateTime.now().subtract(Duration(days: 6 - i));
+            final dayWorkouts = history.where((w) =>
+                w.date.year == date.year &&
+                w.date.month == date.month &&
+                w.date.day == date.day);
+            return dayWorkouts.fold<double>(0, (sum, w) => sum + w.totalVolume);
+          });
+        } else {
+          // Last 4 weeks
+          values = List.generate(4, (i) {
+            final now = DateTime.now();
+            final weekEnd = now.subtract(Duration(days: (3 - i) * 7));
+            final weekStart = weekEnd.subtract(const Duration(days: 6));
+            final weekWorkouts = history.where((w) =>
+                w.date
+                    .isAfter(weekStart.subtract(const Duration(seconds: 1))) &&
+                w.date.isBefore(weekEnd.add(const Duration(seconds: 1))));
+            return weekWorkouts.fold<double>(
+                0, (sum, w) => sum + w.totalVolume);
+          });
+        }
 
-    return BarChart(
-      BarChartData(
-        alignment: BarChartAlignment.spaceBetween,
-        maxY: maxY,
-        barTouchData: BarTouchData(
-          touchTooltipData: BarTouchTooltipData(
-            tooltipBgColor: AppColors.bgCardHover,
-            tooltipRoundedRadius: 8,
-            getTooltipItem: (group, groupIndex, rod, rodIndex) {
-              return BarTooltipItem(
-                '${rod.toY.round()}kg\n',
-                const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-                children: [
-                  TextSpan(
-                    text: period == 'week'
-                        ? 'Day ${groupIndex + 1}'
-                        : 'Week ${groupIndex + 1}',
-                    style: const TextStyle(
-                      color: AppColors.textSecondary,
-                      fontSize: 10,
-                      fontWeight: FontWeight.normal,
+        final maxVal = values.fold<double>(0, (max, v) => v > max ? v : max);
+        final maxY = maxVal == 0 ? 100.0 : maxVal * 1.2;
+
+        return BarChart(
+          BarChartData(
+            alignment: BarChartAlignment.spaceBetween,
+            maxY: maxY,
+            barTouchData: BarTouchData(
+              touchTooltipData: BarTouchTooltipData(
+                tooltipBgColor: AppColors.bgCardHover,
+                tooltipRoundedRadius: 8,
+                getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                  return BarTooltipItem(
+                    '${rod.toY.round()}kg\n',
+                    const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
                     ),
+                    children: [
+                      TextSpan(
+                        text: period == 'week'
+                            ? 'Day ${groupIndex + 1}'
+                            : 'Week ${groupIndex + 1}',
+                        style: const TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            titlesData: const FlTitlesData(show: false),
+            gridData: const FlGridData(show: false),
+            borderData: FlBorderData(show: false),
+            barGroups: values.asMap().entries.map((entry) {
+              final isHighlight = entry.value > 0;
+              return BarChartGroupData(
+                x: entry.key,
+                barRods: [
+                  BarChartRodData(
+                    toY: entry.value,
+                    gradient: isHighlight
+                        ? const LinearGradient(
+                            begin: Alignment.bottomCenter,
+                            end: Alignment.topCenter,
+                            colors: [Color(0xFF8BD56B), AppColors.brandPrimary],
+                          )
+                        : null,
+                    color: isHighlight ? null : AppColors.bgCardHover,
+                    width: period == 'week' ? 10 : 20,
+                    borderRadius:
+                        BorderRadius.circular(period == 'week' ? 5 : 8),
                   ),
                 ],
               );
-            },
+            }).toList(),
           ),
-        ),
-        titlesData: const FlTitlesData(show: false),
-        gridData: const FlGridData(show: false),
-        borderData: FlBorderData(show: false),
-        barGroups: values.asMap().entries.map((entry) {
-          final isHighlight = entry.value > (maxY * 0.7);
-          return BarChartGroupData(
-            x: entry.key,
-            barRods: [
-              BarChartRodData(
-                toY: entry.value,
-                gradient: isHighlight
-                    ? const LinearGradient(
-                        begin: Alignment.bottomCenter,
-                        end: Alignment.topCenter,
-                        colors: [Color(0xFF8BD56B), AppColors.brandPrimary],
-                      )
-                    : null,
-                color: isHighlight ? null : AppColors.bgCardHover,
-                width: period == 'week' ? 10 : 6,
-                borderRadius: BorderRadius.circular(period == 'week' ? 5 : 3),
-              ),
-            ],
-          );
-        }).toList(),
-      ),
-      swapAnimationDuration: AppAnimations.normal,
-      swapAnimationCurve: AppAnimations.smooth,
+          swapAnimationDuration: AppAnimations.normal,
+          swapAnimationCurve: AppAnimations.smooth,
+        );
+      },
     );
   }
 }

@@ -1325,7 +1325,29 @@ class _ExerciseSelectModalState extends State<ExerciseSelectModal> {
   }
 
   Widget _buildFilterChips() {
-    final filters = ['All', 'Chest', 'Back', 'Legs', 'Arms', 'Shoulders'];
+    final filters = [
+      'All',
+      'Abdominals',
+      'Abductors',
+      'Adductors',
+      'Biceps',
+      'Calves',
+      'Cardio',
+      'Chest',
+      'Forearms',
+      'Full Body',
+      'Glutes',
+      'Hamstrings',
+      'Lats',
+      'Lower Back',
+      'Neck',
+      'Obliques',
+      'Quadriceps',
+      'Shoulders',
+      'Traps',
+      'Triceps',
+      'Upper Back',
+    ];
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       padding: Spacing.paddingScreen,
