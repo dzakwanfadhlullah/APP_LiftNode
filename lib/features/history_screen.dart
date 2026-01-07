@@ -418,7 +418,22 @@ class _HistoryScreenState extends State<HistoryScreen>
 
   Widget _buildFrequencyChart() {
     final weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final frequency = [2, 0, 3, 1, 2, 4, 1];
+    final history = context.watch<WorkoutProvider>().history;
+
+    // Calculate workout frequency per weekday from last 4 weeks
+    final frequency = List<int>.filled(7, 0);
+    final fourWeeksAgo = DateTime.now().subtract(const Duration(days: 28));
+
+    for (var workout in history) {
+      if (workout.date.isAfter(fourWeeksAgo)) {
+        final dayIndex = workout.date.weekday - 1; // Monday = 0
+        frequency[dayIndex]++;
+      }
+    }
+
+    final maxFreq = frequency.reduce((a, b) => a > b ? a : b);
+    final normalizer = maxFreq > 0 ? maxFreq.toDouble() : 1.0;
+
     return GymCard(
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -437,7 +452,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                   child: AnimatedContainer(
                     duration: AppAnimations.normal,
                     width: 32,
-                    height: (frequency[i] / 4) * 80,
+                    height: (frequency[i] / normalizer) * 80,
                     decoration: BoxDecoration(
                       gradient:
                           frequency[i] > 0 ? AppColors.gradientPrimary : null,
@@ -451,7 +466,9 @@ class _HistoryScreenState extends State<HistoryScreen>
               Text(
                 weekDays[i],
                 style: AppTypography.caption.copyWith(
-                  color: isToday ? AppColors.brandPrimary : AppColors.textMuted,
+                  color: isToday
+                      ? AppColors.brandPrimary
+                      : AppColors.textSecondary,
                   fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
                 ),
               ),
@@ -496,13 +513,44 @@ class _HistoryScreenState extends State<HistoryScreen>
   }
 
   Widget _buildRecentPRs() {
-    final prs = [
-      {'exercise': 'Bench Press', 'weight': '80kg', 'date': '2 days ago'},
-      {'exercise': 'Squat', 'weight': '120kg', 'date': '5 days ago'},
-      {'exercise': 'Deadlift', 'weight': '140kg', 'date': '1 week ago'},
-    ];
+    final history = context.watch<WorkoutProvider>().history;
+
+    // Get workouts with PRs (prCount > 0), take last 5
+    final workoutsWithPRs =
+        history.where((w) => w.prCount > 0).take(5).toList();
+
+    if (workoutsWithPRs.isEmpty) {
+      return GymCard(
+        child: Column(
+          children: [
+            const Icon(LucideIcons.trophy,
+                size: 32, color: AppColors.textMuted),
+            Spacing.vMd,
+            Text(
+              'No PRs yet!',
+              style: AppTypography.titleMedium
+                  .copyWith(color: AppColors.textSecondary),
+            ),
+            Spacing.vXs,
+            Text(
+              'Complete workouts to track your personal records',
+              style: AppTypography.caption,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
     return Column(
-      children: prs.map((pr) {
+      children: workoutsWithPRs.map((workout) {
+        final daysAgo = DateTime.now().difference(workout.date).inDays;
+        final dateText = daysAgo == 0
+            ? 'Today'
+            : daysAgo == 1
+                ? 'Yesterday'
+                : '$daysAgo days ago';
+
         return GymCard(
           margin: const EdgeInsets.only(bottom: 12),
           child: Row(
@@ -521,8 +569,9 @@ class _HistoryScreenState extends State<HistoryScreen>
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(pr['exercise']!, style: AppTypography.titleMedium),
-                    Text(pr['date']!, style: AppTypography.caption),
+                    Text(workout.exercises.first,
+                        style: AppTypography.titleMedium),
+                    Text(dateText, style: AppTypography.caption),
                   ],
                 ),
               ),
@@ -532,7 +581,9 @@ class _HistoryScreenState extends State<HistoryScreen>
                 decoration: const BoxDecoration(
                     color: AppColors.bgCardHover,
                     borderRadius: AppRadius.roundedSm),
-                child: Text(pr['weight']!, style: AppTypography.statSmall),
+                child: Text(
+                    '${workout.prCount} PR${workout.prCount > 1 ? 's' : ''}',
+                    style: AppTypography.statSmall),
               ),
             ],
           ),
