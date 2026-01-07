@@ -19,6 +19,16 @@ class WorkoutProvider with ChangeNotifier {
   Timer? _timer;
   String? _errorMessage;
 
+  // Debounce timer for save operations
+  Timer? _saveDebounce;
+  static const _saveDebounceMs = 500;
+
+  // Best streak tracking
+  int _bestStreak = 0;
+
+  // Undo stack for set operations (limited to last action)
+  Map<String, dynamic>? _lastAction;
+
   WorkoutProvider() {
     _loadState();
   }
@@ -32,12 +42,14 @@ class WorkoutProvider with ChangeNotifier {
   List<WorkoutHistory> get history => List.unmodifiable(_history);
   String? get errorMessage => _errorMessage;
   int get streak => _calculateStreak();
+  int get bestStreak => _bestStreak;
+  bool get canUndo => _lastAction != null;
   WorkoutHistory? get lastSession =>
       _history.isNotEmpty ? _history.first : null;
 
   int _calculateStreak() {
     if (_history.isEmpty) return 0;
-    // Simple streak calculation: count consecutive days starting from today or yesterday
+    // Streak calculation: count consecutive days starting from today or yesterday
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     var currentStreak = 0;
@@ -58,6 +70,12 @@ class WorkoutProvider with ChangeNotifier {
         currentStreak++;
         checkDate = checkDate.subtract(const Duration(days: 1));
       }
+    }
+
+    // Update best streak if current exceeds it
+    if (currentStreak > _bestStreak) {
+      _bestStreak = currentStreak;
+      _saveStateDebounced(); // Save best streak
     }
 
     return currentStreak;
@@ -161,6 +179,7 @@ class WorkoutProvider with ChangeNotifier {
               .map((e) => WorkoutHistory.fromJson(e))
               .toList();
         }
+        _bestStreak = decoded['bestStreak'] ?? 0;
         if (_isActive) _startTimer();
       }
     } catch (e) {
@@ -180,6 +199,7 @@ class WorkoutProvider with ChangeNotifier {
         'exercises': _exercises.map((e) => e.toJson()).toList(),
         'customExercises': _customExercises.map((e) => e.toJson()).toList(),
         'history': _history.map((e) => e.toJson()).toList(),
+        'bestStreak': _bestStreak,
       });
       await prefs.setString('workout_state', data);
     } catch (e) {
@@ -187,6 +207,70 @@ class WorkoutProvider with ChangeNotifier {
       debugPrint('Error saving state: $e');
       notifyListeners();
     }
+  }
+
+  /// Debounced version of _saveState - prevents too many writes
+  void _saveStateDebounced() {
+    _saveDebounce?.cancel();
+    _saveDebounce = Timer(
+      Duration(milliseconds: _saveDebounceMs),
+      () => _saveState(),
+    );
+  }
+
+  /// Undo last set action (if available)
+  void undo() {
+    if (_lastAction == null) return;
+
+    final action = _lastAction!;
+    final type = action['type'] as String;
+
+    switch (type) {
+      case 'updateSet':
+        // Restore previous set values
+        final exIndex = action['exerciseIndex'] as int;
+        final setIndex = action['setIndex'] as int;
+        final previousKg = action['previousKg'] as String;
+        final previousReps = action['previousReps'] as String;
+
+        if (exIndex < _exercises.length) {
+          final sets = List<WorkoutSet>.from(_exercises[exIndex].sets);
+          if (setIndex < sets.length) {
+            sets[setIndex] = sets[setIndex].copyWith(
+              kg: previousKg,
+              reps: previousReps,
+            );
+            final newExercises = List<ActiveExercise>.from(_exercises);
+            newExercises[exIndex] = _exercises[exIndex].copyWith(sets: sets);
+            _exercises = newExercises;
+          }
+        }
+        break;
+      case 'toggleSet':
+        // Restore previous completion state
+        final exIndex = action['exerciseIndex'] as int;
+        final setIndex = action['setIndex'] as int;
+        final wasCompleted = action['wasCompleted'] as bool;
+
+        if (exIndex < _exercises.length) {
+          final sets = List<WorkoutSet>.from(_exercises[exIndex].sets);
+          if (setIndex < sets.length) {
+            sets[setIndex] = sets[setIndex].copyWith(completed: wasCompleted);
+            final newExercises = List<ActiveExercise>.from(_exercises);
+            newExercises[exIndex] = _exercises[exIndex].copyWith(sets: sets);
+            _exercises = newExercises;
+            if (!wasCompleted) {
+              _restStartTime = null;
+              _restElapsedTime = '00:00';
+            }
+          }
+        }
+        break;
+    }
+
+    _lastAction = null;
+    _saveStateDebounced();
+    notifyListeners();
   }
 
   void stopRest() {
@@ -266,23 +350,43 @@ class WorkoutProvider with ChangeNotifier {
 
   void updateSet(int exIndex, int setIndex, {String? kg, String? reps}) {
     final sets = List<WorkoutSet>.from(_exercises[exIndex].sets);
-    sets[setIndex] = sets[setIndex].copyWith(
-      kg: kg ?? sets[setIndex].kg,
-      reps: reps ?? sets[setIndex].reps,
+    final currentSet = sets[setIndex];
+
+    // Record for undo
+    _lastAction = {
+      'type': 'updateSet',
+      'exerciseIndex': exIndex,
+      'setIndex': setIndex,
+      'previousKg': currentSet.kg,
+      'previousReps': currentSet.reps,
+    };
+
+    sets[setIndex] = currentSet.copyWith(
+      kg: kg ?? currentSet.kg,
+      reps: reps ?? currentSet.reps,
     );
 
     final newExercises = List<ActiveExercise>.from(_exercises);
     newExercises[exIndex] = _exercises[exIndex].copyWith(sets: sets);
     _exercises = newExercises;
-    _saveState();
+    _saveStateDebounced();
     notifyListeners();
   }
 
   void toggleSetComplete(int exIndex, int setIndex) {
     final sets = List<WorkoutSet>.from(_exercises[exIndex].sets);
-    final isNowComplete = !sets[setIndex].completed;
+    final currentSet = sets[setIndex];
+    final isNowComplete = !currentSet.completed;
 
-    sets[setIndex] = sets[setIndex].copyWith(completed: isNowComplete);
+    // Record for undo
+    _lastAction = {
+      'type': 'toggleSet',
+      'exerciseIndex': exIndex,
+      'setIndex': setIndex,
+      'wasCompleted': currentSet.completed,
+    };
+
+    sets[setIndex] = currentSet.copyWith(completed: isNowComplete);
 
     final newExercises = List<ActiveExercise>.from(_exercises);
     newExercises[exIndex] = _exercises[exIndex].copyWith(sets: sets);
@@ -293,7 +397,7 @@ class WorkoutProvider with ChangeNotifier {
       if (!kIsWeb) HapticFeedback.mediumImpact();
     }
 
-    _saveState();
+    _saveStateDebounced();
     notifyListeners();
   }
 
