@@ -181,29 +181,43 @@ class _ProfileScreenState extends State<ProfileScreen>
                           },
                         ),
                       ),
-                      // Avatar
-                      Container(
-                        width: 100,
-                        height: 100,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: AppColors.bgCard,
-                          border: Border.all(
-                              color: _accentColor.withValues(alpha: 0.3),
-                              width: 3),
-                          boxShadow: [
-                            BoxShadow(
-                              color: _accentColor.withValues(alpha: 0.2),
-                              blurRadius: 20,
-                              spreadRadius: 5,
+                      // Avatar - using initials instead of network image
+                      Consumer<SettingsProvider>(
+                        builder: (context, settings, child) {
+                          final initials = settings.userName
+                              .split(' ')
+                              .take(2)
+                              .map(
+                                  (e) => e.isNotEmpty ? e[0].toUpperCase() : '')
+                              .join();
+                          return Container(
+                            width: 100,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: AppColors.bgCard,
+                              border: Border.all(
+                                  color: _accentColor.withValues(alpha: 0.3),
+                                  width: 3),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: _accentColor.withValues(alpha: 0.2),
+                                  blurRadius: 20,
+                                  spreadRadius: 5,
+                                ),
+                              ],
                             ),
-                          ],
-                          image: const DecorationImage(
-                            image: NetworkImage(
-                                'https://i.pravatar.cc/300?u=dzakwan'),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
+                            child: Center(
+                              child: Text(
+                                initials.isEmpty ? 'A' : initials,
+                                style: AppTypography.displayMedium.copyWith(
+                                  color: _accentColor,
+                                  fontSize: 36,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
                       ),
                       // Level badge
                       Positioned(
@@ -1184,10 +1198,25 @@ class _EditProfileSheet extends StatelessWidget {
                 height: 100,
                 decoration: const BoxDecoration(
                   shape: BoxShape.circle,
-                  image: DecorationImage(
-                    image: NetworkImage('https://i.pravatar.cc/300?u=dzakwan'),
-                    fit: BoxFit.cover,
-                  ),
+                  color: AppColors.bgCard,
+                ),
+                child: Consumer<SettingsProvider>(
+                  builder: (context, settings, child) {
+                    final initials = settings.userName
+                        .split(' ')
+                        .take(2)
+                        .map((e) => e.isNotEmpty ? e[0].toUpperCase() : '')
+                        .join();
+                    return Center(
+                      child: Text(
+                        initials.isEmpty ? 'A' : initials,
+                        style: AppTypography.displayMedium.copyWith(
+                          color: AppColors.brandPrimary,
+                          fontSize: 36,
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ),
               Positioned(
