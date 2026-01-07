@@ -146,23 +146,29 @@ class _MainScaffoldState extends State<MainScaffold> {
   }
 
   Widget _buildFab() {
-    return Container(
-      width: 56,
-      height: 56,
-      margin: const EdgeInsets.only(bottom: 24),
-      decoration: BoxDecoration(
-        color: AppColors.brandPrimary,
-        shape: BoxShape.circle,
-        border: Border.all(color: AppColors.bgMain, width: 4),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.brandPrimary.withValues(alpha: 0.4),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+    return GestureDetector(
+      onTap: () {
+        // Start a new workout when FAB is tapped
+        context.read<WorkoutProvider>().startWorkout();
+      },
+      child: Container(
+        width: 56,
+        height: 56,
+        margin: const EdgeInsets.only(bottom: 24),
+        decoration: BoxDecoration(
+          color: AppColors.brandPrimary,
+          shape: BoxShape.circle,
+          border: Border.all(color: AppColors.bgMain, width: 4),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.brandPrimary.withValues(alpha: 0.4),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: const Icon(LucideIcons.plus, color: Colors.black, size: 24),
       ),
-      child: const Icon(LucideIcons.plus, color: Colors.black, size: 24),
     );
   }
 }
