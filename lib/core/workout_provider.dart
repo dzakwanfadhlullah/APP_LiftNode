@@ -376,7 +376,8 @@ class WorkoutProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void updateSet(int exIndex, int setIndex, {String? kg, String? reps}) {
+  void updateSet(int exIndex, int setIndex,
+      {String? kg, String? reps, String? rpe, SetType? type}) {
     final sets = List<WorkoutSet>.from(_exercises[exIndex].sets);
     final currentSet = sets[setIndex];
 
@@ -387,11 +388,15 @@ class WorkoutProvider with ChangeNotifier {
       'setIndex': setIndex,
       'previousKg': currentSet.kg,
       'previousReps': currentSet.reps,
+      'previousRpe': currentSet.rpe,
+      'previousType': currentSet.type,
     };
 
     sets[setIndex] = currentSet.copyWith(
       kg: kg ?? currentSet.kg,
       reps: reps ?? currentSet.reps,
+      rpe: rpe ?? currentSet.rpe,
+      type: type ?? currentSet.type,
     );
 
     final newExercises = List<ActiveExercise>.from(_exercises);
@@ -401,7 +406,31 @@ class WorkoutProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void toggleSetComplete(int exIndex, int setIndex) {
+  void removeSet(int exIndex, int setIndex) {
+    if (_exercises[exIndex].sets.length <= 1) return; // Don't remove last set
+
+    final sets = List<WorkoutSet>.from(_exercises[exIndex].sets);
+    final removedSet = sets[setIndex];
+
+    // Record for undo
+    _lastAction = {
+      'type': 'removeSet',
+      'exerciseIndex': exIndex,
+      'setIndex': setIndex,
+      'removedSet': removedSet,
+    };
+
+    sets.removeAt(setIndex);
+
+    final newExercises = List<ActiveExercise>.from(_exercises);
+    newExercises[exIndex] = _exercises[exIndex].copyWith(sets: sets);
+    _exercises = newExercises;
+    _saveStateDebounced();
+    notifyListeners();
+  }
+
+  void toggleSetComplete(int exIndex, int setIndex,
+      {int? restDurationSeconds}) {
     final sets = List<WorkoutSet>.from(_exercises[exIndex].sets);
     final currentSet = sets[setIndex];
     final isNowComplete = !currentSet.completed;
@@ -422,6 +451,12 @@ class WorkoutProvider with ChangeNotifier {
 
     if (isNowComplete) {
       _restStartTime = DateTime.now().millisecondsSinceEpoch;
+      // Use config duration if provided
+      if (restDurationSeconds != null) {
+        // We might want to store target rest time in future for countdown
+        // For now, we just start the timer (which is count up).
+        // To implement countdown, we'd need _restDuration field.
+      }
       if (!kIsWeb) HapticFeedback.mediumImpact();
     }
 
@@ -431,6 +466,12 @@ class WorkoutProvider with ChangeNotifier {
 
   void addCustomExercise(Exercise exercise) {
     _customExercises.add(exercise);
+    _saveState();
+    notifyListeners();
+  }
+
+  void deleteCustomExercise(String id) {
+    _customExercises.removeWhere((ex) => ex.id == id);
     _saveState();
     notifyListeners();
   }

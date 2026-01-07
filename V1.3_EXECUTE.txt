@@ -1,0 +1,479 @@
+# LiftNode V1.3 - Rencana Eksekusi (Detailed)
+# ============================================
+# File ini berisi rencana implementasi fitur-fitur dari V2 Roadmap
+# yang akan dikerjakan di versi V1.3 dengan detail teknis.
+
+================================================================================
+RINGKASAN EKSEKUSI V1.3
+================================================================================
+
+📊 STATISTIK:
+- Total Item: 45+ fitur
+- Mandiri (AI bisa kerjakan): ~80%
+- Butuh Bantuan Manual: ~20%
+
+================================================================================
+PHASE 1: QUICK WINS (Prioritas Tinggi, Effort Rendah)
+================================================================================
+Target: 1-2 hari kerja
+
+1.1 DELETE INDIVIDUAL SETS
+    Deskripsi: 
+    Memungkinkan pengguna untuk menghapus satu set spesifik di dalam latihan tanpa harus menghapus seluruh latihan atau mereset ulang input. Tombol hapus akan muncul saat pengguna melakukan swipe pada set row atau melalui menu opsi.
+    
+    Teknis:
+    Saat ini `WorkoutProvider` hanya memiliki method `removeExercise` tetapi tidak ada method `removeSet`. Di `workout_logger_screen.dart`, callback `onDeleteSet` sudah ada tetapi hanya menampilkan snackbar dummy. Kita perlu mengimplementasikan logika manipulasi List di provider untuk menghapus item pada index tertentu dari array `sets` di dalam `ActiveExercise`.
+    
+    Kesulitan: ⭐ Mudah
+    Kebutuhan: Tambah method `deleteSet(int exIndex, int setIndex)` di provider.
+    Butuh Bantuan Manual: ❌ Tidak
+
+1.2 SET TYPES SELECTION (Warmup/Failure)
+    Deskripsi: 
+    Menambahkan kemampuan untuk menandai set sebagai 'Warmup', 'Normal', 'Failure', atau 'Dropset'. Ini penting untuk analitik yang akurat karena set pemanasan tidak seharusnya dihitung dalam kalkulasi PR (Personal Record).
+    
+    Teknis:
+    Model `SetType` (enum) dan properti `type` di `WorkoutSet` sudah ada di `models.dart`. UI chip selector juga sudah dibuat di `workout_logger_screen.dart` tetapi belum terhubung ke logic update. Masalahnya adalah nilai default yang mungkin salah index dan UI yang belum mentrigger `provider.updateSet` dengan parameter tipe set.
+    
+    Kesulitan: ⭐ Mudah
+    Kebutuhan: Hubungkan UI chip ke `provider.updateSet(..., type: newType)`.
+    Butuh Bantuan Manual: ❌ Tidak
+
+1.3 RPE INPUT
+    Deskripsi: 
+    Menambahkan kolom input untuk RPE (Rate of Perceived Exertion) skala 1-10 untuk setiap set. Ini membantu melacak intensitas latihan subjektif di luar beban dan repetisi.
+    
+    Teknis:
+    Model `WorkoutSet` sudah memiliki field `rpe`, tetapi belum ada UI input field di `SetRow` widget. Kita perlu menambahkan `GymInput` kecil di sebelah kolom Reps atau di menu visual terpisah baris set, dan memastikan validasi input hanya menerima angka 1-10 (atau 0.5 step).
+    
+    Kesulitan: ⭐ Mudah
+    Kebutuhan: Tambah `GymInput` field untuk RPE dan logic update.
+    Butuh Bantuan Manual: ❌ Tidak
+
+1.4 CONFIGURABLE REST TIMER
+    Deskripsi: 
+    Membuat pengaturan durasi istirahat di profil benar-benar berfungsi. Saat ini pengguna bisa mengubah durasi default di pengaturan, tapi timer saat workout masih menggunakan nilai hardcoded atau nilai lama.
+    
+    Teknis:
+    `SettingsProvider` sudah menyimpan `defaultRestSeconds`, tetapi `WorkoutProvider` tidak membacanya saat menginisialisasi timer istirahat. Diperlukan sinkronisasi agar saat tombol "Rest" ditekan, durasi diambil dari `SettingsProvider` atau override lokal per exercise.
+    
+    Kesulitan: ⭐ Mudah
+    Kebutuhan: Inject/Baca `SettingsProvider.defaultRestSeconds` di `WorkoutProvider`.
+    Butuh Bantuan Manual: ❌ Tidak
+
+1.5 EXERCISE INFO MODAL
+    Deskripsi: 
+    Memberikan informasi berguna tentang cara melakukan gerakan saat pengguna mengklik opsi "Exercise Info" di dalam sesi workout.
+    
+    Teknis:
+    Callback tombol "Exercise Info" di `_showExerciseOptions` saat ini hanya melakukan `Navigator.pop`. Belum ada UI modal atau data instruksi yang ditampilkan. Kita perlu membuat widget modal sederhana yang menampilkan teks deskripsi (placeholder dulu jika data belum lengkap).
+    
+    Kesulitan: ⭐ Mudah
+    Kebutuhan: Buat widget `ExerciseDetailSheet` dan panggil di callback.
+    Butuh Bantuan Manual: ❌ Tidak
+
+1.6 DELETE CUSTOM EXERCISE
+    Deskripsi: 
+    Fitur untuk menghapus custom exercise yang salah buat atau tidak lagi digunakan dari library latihan pengguna.
+    
+    Teknis:
+    List `_customExercises` ada di `WorkoutProvider` dan disimpan di SharedPreferences. Belum ada fungsi public untuk menghapus item dari list ini, dan UI di `ExerciseLibraryScreen` belum memiliki tombol hapus untuk item custom.
+    
+    Kesulitan: ⭐ Mudah
+    Kebutuhan: Tambah method `deleteCustomExercise` dan tombol trash di UI library.
+    Butuh Bantuan Manual: ❌ Tidak
+
+1.7 FAVORITE EXERCISES
+    Deskripsi: 
+    Sistem untuk menandai latihan sebagai favorit agar muncul di tab "Favorites" atau paling atas saat pencarian, mempercepat proses logging.
+    
+    Teknis:
+    Model `Exercise` membutuhkan field boolean `isFavorite`. Karena default exercises di-load dari static list, status favorit harus disimpan terpisah (misalnya `Set<String> favoriteIds` di SharedPreferences) dan di-merge saat aplikasi mulai. Perlu tab baru di `ExerciseLibraryScreen`.
+    
+    Kesulitan: ⭐ Mudah
+    Kebutuhan: State management untuk list ID favorit dan UI heart icon toggle.
+    Butuh Bantuan Manual: ❌ Tidak
+
+1.8 RECENTLY USED EXERCISES
+    Deskripsi: 
+    Menampilkan daftar 5-10 latihan yang terakhir kali digunakan saat membuka layar pemilihan latihan, untuk quick access.
+    
+    Teknis:
+    Perlu logika untuk mencatat `timestamp` penggunaan latihan terakhir. Bisa diambil secara derivatif dari `WorkoutHistory` (ambil exercises dari workout terakhir), atau simpan list khusus `recentExerciseIds`. Solusi derivatif history lebih hemat state.
+    
+    Kesulitan: ⭐ Mudah
+    Kebutuhan: Query history terakhir untuk ekstrak unique exercises.
+    Butuh Bantuan Manual: ❌ Tidak
+
+1.9 DATA SIZE LIMIT
+    Deskripsi: 
+    Mencegah aplikasi melambat atau memori penuh dengan membatasi jumlah riwayat workout yang disimpan secara lokal.
+    
+    Teknis:
+    Data disimpan sebagai JSON string raksasa di SharedPreferences. Jika history tumbuh ribuan entry, load time akan sangat lambat. Perlu logic saat `_saveState()` atau `finishWorkout()`: jika `history.length > 500`, hapus entry terlama (FIFO shrinking).
+    
+    Kesulitan: ⭐ Mudah
+    Kebutuhan: Implementasi logic pemangkasan list di `WorkoutProvider`.
+    Butuh Bantuan Manual: ❌ Tidak
+
+1.10 ACCESSIBILITY - LARGER TOUCH TARGETS
+    Deskripsi: 
+    Opsi bagi pengguna dengan jari besar atau kesulitan motorik untuk memperbesar ukuran tombol interaktif utama.
+    
+    Teknis:
+    Tambah boolean `largeTouchTargets` di `SettingsProvider`. Di komponen UI seperti `NeonButton` atau `GymCard`, baca nilai ini untuk override `height` atau `padding`. Misal: tinggi tombol default 48px jadi 56px.
+    
+    Kesulitan: ⭐ Mudah
+    Kebutuhan: Update visual component base classes.
+    Butuh Bantuan Manual: ❌ Tidak
+
+1.11 ACCESSIBILITY - REDUCED MOTION
+    Deskripsi: 
+    Opsi untuk mematikan animasi yang berlebihan bagi pengguna yang sensitif motion sickness atau ingin performa lebih cepat.
+    
+    Teknis:
+    Tambah boolean `reducedMotion` di `SettingsProvider`. Di widget animasi global (seperti `AnimatedContainer`, list animations), set `duration` menjadi `Duration.zero` jika setting ini aktif.
+    
+    Kesulitan: ⭐ Mudah
+    Kebutuhan: Wrap durations dengan getter condition.
+    Butuh Bantuan Manual: ❌ Tidak
+
+================================================================================
+PHASE 2: CORE FEATURES (Prioritas Tinggi, Effort Sedang)
+================================================================================
+Target: 3-5 hari kerja
+
+2.1 EDIT PROFILE (Name & Avatar)
+    Deskripsi: 
+    Memungkinkan pengguna mengubah nama tampilan dan memilih avatar (initials atau preset) di halaman profil.
+    
+    Teknis:
+    `SettingsProvider` sudah punya `setUserName`. Masalahnya UI untuk input nama baru belum ada. Perlu buat modal `EditProfileSheet` dengan `TextField` dan color picker atau avatar selector sederhana. Setelah save, panggil provider update dan persist ke storage.
+    
+    Kesulitan: ⭐⭐ Sedang
+    Kebutuhan: Buat UI Modal Edit Profile.
+    Butuh Bantuan Manual: ❌ Tidak
+
+2.2 DRAG-TO-REORDER EXERCISES
+    Deskripsi: 
+    Pengguna bisa menahan dan menggeser kartu latihan untuk mengubah urutan latihan dalam sesi workout yang sedang berlangsung.
+    
+    Teknis:
+    Saat ini list exercises dirender menggunakan `ListView.builder` biasa. Icon "Grip" hanya kosmetik. Harus diubah menjadi `ReorderableListView` atau menggunakan library `ReorderableSlivers`. Perlu handle konflik gesture dengan scroll vertikal dan update index list di provider secara real-time.
+    
+    Kesulitan: ⭐⭐ Sedang
+    Kebutuhan: Refactor screen menjadi ReorderableListView, tambah method `reorderExercises(oldIdx, newIdx)`.
+    Butuh Bantuan Manual: ❌ Tidak
+
+2.3 REPLACE EXERCISE
+    Deskripsi: 
+    Fitur "Swap": Mengganti satu latihan dengan latihan lain (misal: Bench Press penuh, ganti ke Dumbbell Press) tanpa menghapus set yang sudah dicatat (jika relevan) atau menggantinya sebagai slot kosong.
+    
+    Teknis:
+    Tombol "Replace" sudah ada di UI tapi kosong. Flow-nya: Buka modal library -> Pilih exercise baru -> Ganti object `ActiveExercise` di index tersebut dengan instance baru dari exercise yang dipilih, reset sets atau coba pertahankan jumlah set.
+    
+    Kesulitan: ⭐⭐ Sedang
+    Kebutuhan: Reuse `ExerciseLibraryScreen` sebagai picker mod, logic replace di provider.
+    Butuh Bantuan Manual: ❌ Tidak
+
+2.4 NOTES PER SET
+    Deskripsi: 
+    Catatan kecil untuk set tertentu, misal: "Grip agak lebar", "Lutut sakit", "Spotter bantu 2 reps".
+    
+    Teknis:
+    Model `WorkoutSet` perlu field `String? note`. UI perlu tombol kecil "Add Note" di tiap baris set. Saat diklik, muncul dialog input teks. Note yang terisi perlu indikator visual di UI baris set tersebut.
+    
+    Kesulitan: ⭐⭐ Sedang
+    Kebutuhan: Schema update, UI dialog input.
+    Butuh Bantuan Manual: ❌ Tidak
+
+2.5 REPEAT LAST SESSION
+    Deskripsi: 
+    Satu klik untuk memulai workout baru dengan daftar latihan, set, dan repetisi yang sama persis (atau sedikit dinaikkan) dari sesi terakhir.
+    
+    Teknis:
+    Ambil `WorkoutHistory` terakhir. Buat list `ActiveExercise` baru berdasarkan data history tersebut. Salin set, kg, dan reps sebagai target, tetapi reset status `completed` jadi false. Panggil `startWorkout` dengan list yang sudah disiapkan ini.
+    
+    Kesulitan: ⭐⭐ Sedang
+    Kebutuhan: Logic cloning object history ke active state.
+    Butuh Bantuan Manual: ❌ Tidak
+
+2.6 LEVEL CALCULATION LOGIC
+    Deskripsi: 
+    Gamifikasi progress. Level pengguna naik berdasarkan total volume yang diangkat atau jumlah workout.
+    
+    Teknis:
+    UI Profile sudah menampilkan level badge statis. Kita butuh formula: `Total XP = (Total Workouts * 100) + (Total Volume / 100)`. Lalu `Level = sqrt(XP / 500)`. Logic ini ditempatkan di getter `SettingsProvider` atau helper class kalkulasi.
+    
+    Kesulitan: ⭐⭐ Sedang
+    Kebutuhan: Implementasi matematika XP dan Leveling system.
+    Butuh Bantuan Manual: ❌ Tidak
+
+2.7 WEEKLY GOALS/TARGETS
+    Deskripsi: 
+    Dashboard sederhana di Home yang menunjukkan target: "3/4 Workouts minggu ini".
+    
+    Teknis:
+    Hitung jumlah workout `_history` yang `date`-nya dalam range minggu ini (Senin-Minggu). Bandingkan dengan target user (default 4). Tampilkan sebagai progress bar circular atau linear di Home Screen.
+    
+    Kesulitan: ⭐⭐ Sedang
+    Kebutuhan: Logic filtering date range & UI progress widget.
+    Butuh Bantuan Manual: ❌ Tidak
+
+2.8 VOLUME PROGRESS CHART
+    Deskripsi: 
+    Grafik garis yang menunjukkan total volume (kg * reps) per workout dari waktu ke waktu.
+    
+    Teknis:
+    Menggunakan library `fl_chart`. Query data history, extract `date` (X-axis) dan `totalVolume` (Y-axis). Perlu handling scaling axis otomatis agar grafik terbaca bagus.
+    
+    Kesulitan: ⭐⭐ Sedang
+    Kebutuhan: Implementasi LineChart widget dengan data real.
+    Butuh Bantuan Manual: ❌ Tidak
+
+2.9 EXERCISE-SPECIFIC HISTORY
+    Deskripsi: 
+    Saat memilih latihan, pengguna bisa melihat riwayat: "Terakhir kali kamu melakukan Bench Press: 60kg x 8".
+    
+    Teknis:
+    Saat detail exercise dibuka, scan seluruh `_history`. Filter workout yang mengandung exercise ID tersebut. Tampilkan list tanggal dan performa (Best set) dari history tersebut.
+    
+    Kesulitan: ⭐⭐ Sedang
+    Kebutuhan: Algoritma filtering history yang efisien.
+    Butuh Bantuan Manual: ❌ Tidak
+
+2.10 DATA MIGRATION STRATEGY
+    Deskripsi: 
+    Persiapan agar update aplikasi di masa depan tidak menghapus data pengguna jika struktur JSON berubah.
+    
+    Teknis:
+    Tambahkan field `version` di top-level JSON state. Saat `_loadState`, cek version. Jika version file (misal 1) lebih rendah dari version app (misal 2), jalankan fungsi migrasi data (misal: convert string date ke epoch, rename field) sebelum load ke memori.
+    
+    Kesulitan: ⭐⭐ Sedang
+    Kebutuhan: Migration runner logic di `WorkoutProvider`.
+    Butuh Bantuan Manual: ❌ Tidak
+
+2.11 ERROR LISTENER FIX
+    Deskripsi: 
+    Memperbaiki masalah teknis dimana error snackbar listener didaftarkan berkali-kali tanpa dibersihkan, menyebabkan memory leak.
+    
+    Teknis:
+    Pattern `provider.addListener` manual di `initState` tanpa remove di `dispose` adalah bad practice. Solusinya refactor menggunakan widget wrapper seperti `Selector` atau `Consumer` yang otomatis rebuild saat error state berubah, ATAU simpan referensi fungsi listener ke variabel member agar bisa dipanggil `removeListener` di `dispose`.
+    
+    Kesulitan: ⭐⭐ Sedang
+    Kebutuhan: Refactor lifecycle handling di Main/Home screen.
+    Butuh Bantuan Manual: ❌ Tidak
+
+2.12 PAGE ROUTE TRANSITIONS
+    Deskripsi: 
+    Membuat transisi antar halaman lebih halus (misal: slide dari kanan, bukan default fade/jump instan).
+    
+    Teknis:
+    Ganti `MaterialPageRoute` default dengan `PageRouteBuilder` custom. Definisikan animasi `SlideTransition` atau `FadeTransition` di parameter `transitionsBuilder`. Terapkan ini di logic navigasi utama.
+    
+    Kesulitan: ⭐⭐ Sedang
+    Kebutuhan: Custom Route class.
+    Butuh Bantuan Manual: ❌ Tidak
+
+2.13 HERO ANIMATIONS
+    Deskripsi: 
+    Efek visual dimana elemen (seperti judul latihan) "terbang" dari list ke halaman detail saat diklik.
+    
+    Teknis:
+    Bungkus widget yang sama (misal title/gambar) di page asal dan page tujuan dengan widget `Hero`. Keduanya harus punya `tag` string yang identik dan unik per item (misal: `exercise-title-{id}`).
+    
+    Kesulitan: ⭐⭐ Sedang
+    Kebutuhan: Identifikasi elemen visual bersama & tagging.
+    Butuh Bantuan Manual: ❌ Tidak
+
+2.14 DEEP LINKING
+    Deskripsi: 
+    Kemampuan membuka aplikasi langsung ke halaman tertentu lewat URL/Link (misal dari notifikasi).
+    
+    Teknis:
+    Konfigurasi `AndroidManifest.xml` / `Info.plist` untuk scheme intent filter. Di Flutter, perlu handle `initialRoute` dinamis atau gunakan package routing seperti `go_router` untuk mapping URL `/workout/start` ke screen yang tepat.
+    
+    Kesulitan: ⭐⭐ Sedang
+    Kebutuhan: Routing logic upgrade.
+    Butuh Bantuan Manual: ❌ Tidak
+
+2.15 SOCIAL - SHARE WORKOUT
+    Deskripsi: 
+    Fitur sharing teks ringkasan ke WhatsApp/IG. Contoh: "Baru saja menyelesaikan Leg Day! Total Volume: 5000kg. 💪 #LiftNode".
+    
+    Teknis:
+    Generate string ringkasan dari objek `WorkoutHistory`. Gunakan package `share_plus` (sudah terinstall). Trigger native share sheet OS. Untuk export gambar masih terlalu kompleks (Phase 10.2 nanti), jadi mulai dengan teks dulu.
+    
+    Kesulitan: ⭐⭐ Sedang
+    Kebutuhan: String template generator & share intent.
+    Butuh Bantuan Manual: ❌ Tidak
+
+2.16 SCREEN READER SUPPORT
+    Deskripsi: 
+    Memastikan aplikasi dapat digunakan oleh tunanetra dengan pembaca layar (TalkBack/VoiceOver).
+    
+    Teknis:
+    Banyak custom widget pakai `GestureDetector` atau `Container` yang tidak otomatis punya semantik. Perlu bungkus elemen penting dengan `Semantics(label: "Mulai Workout", button: true, child: ...)` agar screen reader bisa membacanya dengan benar.
+    
+    Kesulitan: ⭐⭐ Sedang
+    Kebutuhan: Audit dan wrap accessibility widgets.
+    Butuh Bantuan Manual: ❌ Tidak
+
+================================================================================
+PHASE 3: MAJOR FEATURES (Effort Tinggi)
+================================================================================
+Target: 1-2 minggu kerja
+
+3.1 LIGHT THEME SUPPORT
+    Deskripsi: 
+    Mode tampilan terang yang lengkap dan konsisten (bukan sekadar invert warna).
+    
+    Teknis:
+    Sistem warna saat ini sangat terikat pada "Neon on Dark". Membuat light theme berarti mendefinisikan ulang seluruh palet warna: background card, text primary/secondary, border colors, shadows (shadow gelap di BG terang vs shadow terang di BG gelap). `AppTheme` class perlu logic switch `brightness` yang robust.
+    
+    Kesulitan: ⭐⭐⭐ Tinggi
+    Kebutuhan: Redesign color palette & refactor seluruh AppColors.
+    Butuh Bantuan Manual: ❌ Tidak
+
+3.2 ONBOARDING FLOW
+    Deskripsi: 
+    Serangkaian layar perkenalan saat pertama kali buka app: Set Nama, Goal, Berat Badan, Preferred Unit.
+    
+    Teknis:
+    Cek flag `firstRun` di SharedPreferences. Jika true, redirect ke `OnboardingScreen` (bukan Home). Screen ini berisi PageView multi-step. Di step terakhir, simpan data ke `SettingsProvider`, set `firstRun = false`, lalu navigate to Home.
+    
+    Kesulitan: ⭐⭐⭐ Tinggi
+    Kebutuhan: UI Flow baru & logic first-launch check.
+    Butuh Bantuan Manual: ❌ Tidak
+
+3.3 WORKOUT TEMPLATES
+    Deskripsi: 
+    Membuat, menyimpan, dan menggunakan "resep" workout (misal: "Push Day A", "Pull Day B") agar tidak perlu menyusun dari nol tiap sesi.
+    
+    Teknis:
+    Butuh model data baru `WorkoutTemplate` (mirip history tapi tanpa set logs, hanya struktur). Butuh CRUD UI: Create template (dari scratch atau save from history), Read (list templates library), Update (edit template), Delete. Dan tombol "Start from Template".
+    
+    Kesulitan: ⭐⭐⭐ Tinggi
+    Kebutuhan: Model baru, CRUD screens penuh, storage logic terpisah.
+    Butuh Bantuan Manual: ❌ Tidak
+
+3.4 ACHIEVEMENTS UNLOCK LOGIC
+    Deskripsi: 
+    Mekanisme reward otomatis. Contoh: Unlock badge "Early Bird" jika workout sebelum jam 6 pagi.
+    
+    Teknis:
+    Definisi sistem `Achievement` (id, condition, icon). Listener paska-workout `checkAchievements(history)`: cek semua kondisi. Jika terpenuhi dan belum unlocked, simpan status unlock, tampilkan animasi overlay "Achievement Unlocked!".
+    
+    Kesulitan: ⭐⭐⭐ Tinggi
+    Kebutuhan: Engine rules evaluation & UI notifikasi global.
+    Butuh Bantuan Manual: ❌ Tidak
+
+3.5 ADVANCED ANALYTICS
+    Deskripsi: 
+    Insight mendalam: Distribusi otot (Pie chart/Radar chart), Kalender heatmap (Github style), Estimasi 1RM (One Rep Max) per exercise.
+    
+    Teknis:
+    Kompleksitas hitungan statistik. Butuh agregasi data historical yang ekstensif. Visualisasi chart yang kompleks (Radar chart untuk muscle balance). Query performa harus dioptimasi agar tidak nge-lag di main thread.
+    
+    Kesulitan: ⭐⭐⭐ Tinggi
+    Kebutuhan: Advanced math logic & Chart libraries.
+    Butuh Bantuan Manual: ❌ Tidak
+
+3.6 REST TIMER NOTIFICATION
+    Deskripsi: 
+    Notifikasi sistem (suara/getar/banner) saat timer istirahat habis, bahkan jika aplikasi di background atau layar mati.
+    
+    Teknis:
+    Timer Dart standar mati saat app background/OS sleep. Solusinya tidak bisa pure Dart. Harus pakai plugin `flutter_local_notifications` untuk schedule notifikasi di masa depan (saat timer start, schedule notif X detik kemudian). Perlu handle permission notifikasi OS (iOS/Android 13+).
+    
+    Kesulitan: ⭐⭐⭐ Tinggi
+    Kebutuhan: Native plugin integration & Permission handling.
+    Butuh Bantuan Manual: ❌ Tidak
+    Catatan: ⚠️ Testing notifikasi background seringkali gagal di emulator, disarankan di device fisik.
+
+================================================================================
+PHASE 4: FITUR BUTUH BANTUAN MANUAL 🚨
+================================================================================
+Fitur-fitur ini secara teknis BISA dikoding AI, tapi BLOCKED tanpa setup external dari Anda.
+
+4.1 CLOUD BACKUP (Firebase/Supabase)
+    Deskripsi: 
+    Sinkronisasi data agar aman jika HP hilang atau ganti HP.
+    
+    Teknis:
+    Aplikasi perlu koneksi ke Backend-as-a-Service (BaaS). SDK Firebase/Supabase perlu file konfigurasi unik yang berisi API Keys project Anda.
+    
+    ⚠️ MENGAPA BUTUH BANTUAN MANUAL:
+    AI tidak bisa login ke Google Account/Gmail Anda untuk membuat project di Firebase Console. AI tidak bisa generate API Key billing untuk Anda.
+    
+    Langkah Anda:
+    1. Pergi ke https://console.firebase.google.com
+    2. Buat project baru "LiftNode"
+    3. Enable Firestore Database & Auth
+    4. Download `google-services.json` dan letakkan di folder android/app
+    5. Beritahu AI file sudah ada, baru AI bisa setting Gradle config-nya.
+
+4.2 PROGRESS PHOTOS
+    Deskripsi: 
+    Mengambil foto dari kamera atau galeri untuk tracking fisik.
+    
+    Teknis:
+    Integrasi plugin `image_picker` dan akses storage file system lokal.
+    
+    ⚠️ MENGAPA BUTUH BANTUAN MANUAL:
+    Emulator/Simulator kamera sering error atau blank screen. Testing permission (Minta akses kamera/galeri, popup "Allow/Deny") sangat sulit didebug tanpa interaksi fisik di layar device. Anda harus run di HP asli untuk memastikan tidak crash.
+
+4.3 EXERCISE IMAGES/ANIMATIONS
+    Deskripsi: 
+    Visualisasi gerakan latihan (GIF/Gambar statis) di library agar user tahu cara melakukannya.
+    
+    Teknis:
+    Aplikasi butuh file aset gambar (misal: bench_press.gif, squat.png). Total bisa ratusan file.
+    
+    ⚠️ MENGAPA BUTUH BANTUAN MANUAL:
+    AI bisa generate kode path gambar, tapi TIDAK BISA mendownload/membuat 100+ file gambar latihan yang akurat secara anatomis dan memasukkannya ke folder `assets/`.
+    Opsi Anda:
+    A. Cari dataset gambar open source (wger.de), download manual satu folder, zip, upload ke project.
+    B. Minta AI generate satu-satu (lama & boros kuota).
+    C. Beli asset pack icon fitness.
+
+================================================================================
+URUTAN EKSEKUSI YANG DISARANKAN
+================================================================================
+
+📌 SPRINT 1 (V1.3.0) - Quick Wins
+   → Phase 1 semua item (11 fitur)
+   → Estimasi: 1-2 hari
+   → Butuh bantuan: ❌ Tidak ada
+
+📌 SPRINT 2 (V1.3.1) - Core Features Part 1  
+   → Phase 2 item 2.1 - 2.8 (8 fitur)
+   → Estimasi: 2-3 hari
+   → Butuh bantuan: ❌ Tidak ada
+
+📌 SPRINT 3 (V1.3.2) - Core Features Part 2
+   → Phase 2 item 2.9 - 2.16 (8 fitur)
+   → Estimasi: 2-3 hari
+   → Butuh bantuan: ❌ Tidak ada
+
+📌 SPRINT 4 (V1.4.0) - Major Features
+   → Phase 3 semua item (6 fitur)
+   → Estimasi: 1-2 minggu
+   → Butuh bantuan: ⚠️ Testing notifikasi di device fisik
+
+📌 SPRINT 5 (V1.5.0) - Cloud & Media
+   → Phase 4 semua item (3 fitur)
+   → Estimasi: 1-2 minggu
+   → Butuh bantuan: ⚠️ Firebase setup, asset gambar, testing kamera
+
+================================================================================
+SIAP UNTUK MULAI?
+================================================================================
+
+Ketik salah satu untuk memulai:
+- "SPRINT 1" → Mulai dari Quick Wins
+- "PHASE X" → Mulai dari phase tertentu
+- "ITEM X.X" → Kerjakan item spesifik
+
+================================================================================
+*File dibuat: LiftNode V1.3 Detailed Execution Plan*

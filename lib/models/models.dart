@@ -89,6 +89,7 @@ class ActiveExercise {
   final String exerciseId;
   final String name;
   final String muscle; // Added for muscle group tracking
+  final String equipment;
   final List<WorkoutSet> sets;
 
   ActiveExercise({
@@ -96,6 +97,7 @@ class ActiveExercise {
     required this.exerciseId,
     required this.name,
     required this.muscle,
+    this.equipment = 'N/A', // Default for migration
     required this.sets,
   });
 
@@ -104,6 +106,7 @@ class ActiveExercise {
     String? exerciseId,
     String? name,
     String? muscle,
+    String? equipment,
     List<WorkoutSet>? sets,
   }) {
     return ActiveExercise(
@@ -111,6 +114,7 @@ class ActiveExercise {
       exerciseId: exerciseId ?? this.exerciseId,
       name: name ?? this.name,
       muscle: muscle ?? this.muscle,
+      equipment: equipment ?? this.equipment,
       sets: sets ?? this.sets,
     );
   }
@@ -120,6 +124,7 @@ class ActiveExercise {
         'exerciseId': exerciseId,
         'name': name,
         'muscle': muscle,
+        'equipment': equipment,
         'sets': sets.map((s) => s.toJson()).toList(),
       };
 
@@ -127,7 +132,8 @@ class ActiveExercise {
         id: json['id'],
         exerciseId: json['exerciseId'],
         name: json['name'],
-        muscle: json['muscle'] ?? 'Full Body', // Fallback for old data
+        muscle: json['muscle'] ?? 'Full Body',
+        equipment: json['equipment'] ?? 'N/A',
         sets:
             (json['sets'] as List).map((s) => WorkoutSet.fromJson(s)).toList(),
       );

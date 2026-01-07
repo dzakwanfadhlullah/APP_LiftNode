@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../core/app_theme.dart';
 import '../core/shared_widgets.dart';
 import '../core/workout_provider.dart';
+import '../core/settings_provider.dart';
 import '../core/constants.dart';
 import '../models/models.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -670,12 +671,15 @@ class _ExerciseCard extends StatelessWidget {
               child:
                   Center(child: Text('PREV', style: AppTypography.overline))),
           SizedBox(
-              width: 65,
+              width: 60,
               child: Center(child: Text('KG', style: AppTypography.overline))),
           SizedBox(
-              width: 65,
+              width: 60,
               child:
                   Center(child: Text('REPS', style: AppTypography.overline))),
+          SizedBox(
+              width: 40,
+              child: Center(child: Text('RPE', style: AppTypography.overline))),
           SizedBox(
               width: 45,
               child: Center(child: Text('✓', style: AppTypography.overline))),
@@ -715,7 +719,10 @@ class _ExerciseCard extends StatelessWidget {
             _buildOptionItem(
               icon: LucideIcons.info,
               label: 'Exercise Info',
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                _showExerciseInfo(context, exercise);
+              },
             ),
             _buildOptionItem(
               icon: LucideIcons.trash2,
@@ -756,6 +763,109 @@ class _ExerciseCard extends StatelessWidget {
       ),
     );
   }
+
+  void _showExerciseInfo(BuildContext context, ActiveExercise exercise) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.bgCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (_, controller) => SingleChildScrollView(
+          controller: controller,
+          padding: Spacing.paddingCard,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: const BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: AppRadius.roundedFull,
+                  ),
+                ),
+              ),
+              Spacing.vLg,
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandPrimary.withValues(alpha: 0.1),
+                      borderRadius: AppRadius.roundedMd,
+                    ),
+                    child: const Icon(LucideIcons.dumbbell,
+                        color: AppColors.brandPrimary, size: 28),
+                  ),
+                  Spacing.hMd,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(exercise.name, style: AppTypography.headlineSmall),
+                        Text(exercise.muscle,
+                            style: AppTypography.bodyMedium
+                                .copyWith(color: AppColors.textSecondary)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const GymDivider(),
+              const Text('Instructions', style: AppTypography.titleMedium),
+              Spacing.vSm,
+              Text(
+                'Detailed instructions for ${exercise.name} will appear here. '
+                'Perform this exercise with controlled form and full range of motion.',
+                style: AppTypography.bodyMedium
+                    .copyWith(color: AppColors.textSecondary, height: 1.5),
+              ),
+              Spacing.vLg,
+              _buildInfoRow(
+                  LucideIcons.target, 'Target Muscle', exercise.muscle),
+              Spacing.vSm,
+              _buildInfoRow(
+                  LucideIcons.layers, 'Equipment', exercise.equipment),
+              Spacing.vSm,
+              _buildInfoRow(
+                  LucideIcons.activity, 'Difficulty', 'Intermediate'), // Mock
+              Spacing.vLg,
+              NeonButton.small(
+                title: 'Close',
+                onPress: () => Navigator.pop(context),
+                variant: 'secondary',
+              ),
+              Spacing.vLg,
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: AppColors.textSecondary),
+        Spacing.hSm,
+        Text('$label:',
+            style: AppTypography.bodyMedium
+                .copyWith(color: AppColors.textSecondary)),
+        const Spacer(),
+        Text(value,
+            style:
+                AppTypography.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
+      ],
+    );
+  }
 }
 
 // =============================================================================
@@ -785,8 +895,10 @@ class _SetRow extends StatefulWidget {
 class _SetRowState extends State<_SetRow> {
   late TextEditingController _kgController;
   late TextEditingController _repsController;
+  late TextEditingController _rpeController;
   final FocusNode _kgFocus = FocusNode();
   final FocusNode _repsFocus = FocusNode();
+  final FocusNode _rpeFocus = FocusNode();
 
   @override
   void initState() {
@@ -798,17 +910,21 @@ class _SetRowState extends State<_SetRow> {
     final defaultReps = widget.workoutSet.reps.isEmpty
         ? (widget.previousSet?.reps ?? '')
         : widget.workoutSet.reps;
+    final defaultRpe = widget.workoutSet.rpe ?? '';
 
     _kgController = TextEditingController(text: defaultKg);
     _repsController = TextEditingController(text: defaultReps);
+    _rpeController = TextEditingController(text: defaultRpe);
   }
 
   @override
   void dispose() {
     _kgController.dispose();
     _repsController.dispose();
+    _rpeController.dispose();
     _kgFocus.dispose();
     _repsFocus.dispose();
+    _rpeFocus.dispose();
     super.dispose();
   }
 
@@ -842,22 +958,11 @@ class _SetRowState extends State<_SetRow> {
         ),
         child: Row(
           children: [
-            // Set number
+            // Set Type Selector (was Set Number)
             SizedBox(
               width: 35,
               child: Center(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: const BoxDecoration(
-                    color: AppColors.bgCardHover,
-                    borderRadius: AppRadius.roundedXs,
-                  ),
-                  child: Text(
-                    '${widget.setIndex + 1}',
-                    style: AppTypography.labelMedium,
-                  ),
-                ),
+                child: _buildSetTypeSelector(provider),
               ),
             ),
             // Previous set
@@ -873,6 +978,7 @@ class _SetRowState extends State<_SetRow> {
                           ? TextDecoration.underline
                           : null,
                     ),
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
@@ -882,21 +988,43 @@ class _SetRowState extends State<_SetRow> {
               controller: _kgController,
               focusNode: _kgFocus,
               isDecimal: true,
-              onChanged: (v) =>
-                  provider.updateSet(widget.exIndex, widget.setIndex, kg: v),
+              width: 60,
+              onChanged: (val) =>
+                  provider.updateSet(widget.exIndex, widget.setIndex, kg: val),
               onSubmitted: (_) => _repsFocus.requestFocus(),
             ),
-            Spacing.hSm,
+            Spacing.hXs,
             // Reps input
             _buildInput(
               controller: _repsController,
               focusNode: _repsFocus,
-              onChanged: (v) =>
-                  provider.updateSet(widget.exIndex, widget.setIndex, reps: v),
-              onSubmitted: (_) => _handleSetComplete(provider),
+              width: 60,
+              onChanged: (val) => provider
+                  .updateSet(widget.exIndex, widget.setIndex, reps: val),
+              onSubmitted: (_) => _rpeFocus.requestFocus(),
             ),
-            Spacing.hSm,
-            // Complete button
+            Spacing.hXs,
+            // RPE input
+            _buildInput(
+              controller: _rpeController,
+              focusNode: _rpeFocus,
+              width: 40,
+              isDecimal: true,
+              onChanged: (val) {
+                if (val.isEmpty) {
+                  provider.updateSet(widget.exIndex, widget.setIndex,
+                      rpe: null);
+                } else {
+                  provider.updateSet(widget.exIndex, widget.setIndex, rpe: val);
+                }
+              },
+              onSubmitted: (_) {
+                _rpeFocus.unfocus();
+                // Optionally auto-complete logic
+              },
+            ),
+            Spacing.hXs,
+            // Checkbox
             GestureDetector(
               onTap: () => _handleSetComplete(provider),
               child: AnimatedContainer(
@@ -929,6 +1057,69 @@ class _SetRowState extends State<_SetRow> {
     );
   }
 
+  Widget _buildSetTypeSelector(WorkoutProvider provider) {
+    Color bg;
+    Color fg;
+    String label;
+
+    switch (widget.workoutSet.type) {
+      case SetType.warmup:
+        bg = AppColors.warning.withValues(alpha: 0.2);
+        fg = AppColors.warning;
+        label = 'W';
+        break;
+      case SetType.failure:
+        bg = AppColors.error.withValues(alpha: 0.2);
+        fg = AppColors.error;
+        label = 'F';
+        break;
+      case SetType.normal:
+        bg = AppColors.bgCardHover;
+        fg = AppColors.textPrimary;
+        label = '${widget.setIndex + 1}';
+        break;
+    }
+
+    return PopupMenuButton<SetType>(
+      initialValue: widget.workoutSet.type,
+      onSelected: (SetType type) {
+        provider.updateSet(widget.exIndex, widget.setIndex, type: type);
+      },
+      itemBuilder: (context) => [
+        const PopupMenuItem(
+          value: SetType.normal,
+          child: Text('Normal Set'),
+        ),
+        const PopupMenuItem(
+          value: SetType.warmup,
+          child: Text('Warmup Set (W)'),
+        ),
+        const PopupMenuItem(
+          value: SetType.failure,
+          child: Text('Failure Set (F)'),
+        ),
+      ],
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: AppRadius.roundedXs,
+          border: Border.all(
+            color: fg.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: AppTypography.labelMedium.copyWith(color: fg),
+          ),
+        ),
+      ),
+    );
+  }
+
   void _copyPreviousSet(WorkoutProvider provider) {
     if (widget.previousSet != null) {
       if (!kIsWeb) HapticFeedback.selectionClick();
@@ -945,7 +1136,9 @@ class _SetRowState extends State<_SetRow> {
 
   void _handleSetComplete(WorkoutProvider provider) {
     if (!kIsWeb) HapticFeedback.mediumImpact();
-    provider.toggleSetComplete(widget.exIndex, widget.setIndex);
+    final settings = context.read<SettingsProvider>();
+    provider.toggleSetComplete(widget.exIndex, widget.setIndex,
+        restDurationSeconds: settings.defaultRestSeconds);
   }
 
   Widget _buildInput({
@@ -954,9 +1147,10 @@ class _SetRowState extends State<_SetRow> {
     required Function(String) onChanged,
     required Function(String) onSubmitted,
     bool isDecimal = false,
+    double width = 60,
   }) {
     return SizedBox(
-      width: 65,
+      width: width,
       child: TextField(
         controller: controller,
         focusNode: focusNode,

@@ -186,10 +186,48 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
                 ],
               ),
             ),
-            const Icon(LucideIcons.chevronRight,
-                size: 20, color: AppColors.textMuted),
+            if (ex.isCustom)
+              IconButton(
+                icon: const Icon(LucideIcons.trash2,
+                    color: AppColors.error, size: 20),
+                onPressed: () => _confirmDeleteCustomExercise(ex),
+              )
+            else
+              const Icon(LucideIcons.chevronRight,
+                  size: 20, color: AppColors.textMuted),
           ],
         ),
+      ),
+    );
+  }
+
+  void _confirmDeleteCustomExercise(Exercise ex) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.bgCard,
+        title:
+            const Text('Delete Exercise?', style: AppTypography.headlineSmall),
+        content: Text(
+          'Are you sure you want to delete "${ex.name}"? This cannot be undone.',
+          style: AppTypography.bodyMedium,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<WorkoutProvider>().deleteCustomExercise(ex.id);
+            },
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppColors.error),
+            ),
+          ),
+        ],
       ),
     );
   }
