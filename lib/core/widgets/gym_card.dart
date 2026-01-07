@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../app_theme.dart';
 
 // =============================================================================
@@ -55,7 +56,7 @@ class _GymCardState extends State<GymCard> with SingleTickerProviderStateMixin {
       onTap: widget.onTap,
       onLongPress: widget.onLongPress != null
           ? () {
-              HapticFeedback.mediumImpact();
+              if (!kIsWeb) HapticFeedback.mediumImpact();
               widget.onLongPress!();
             }
           : null,

@@ -303,6 +303,54 @@ class WorkoutProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  // Export all data as JSON string
+  String getExportData() {
+    final exportData = {
+      'exportDate': DateTime.now().toIso8601String(),
+      'appVersion': '1.2.0',
+      'history': _history.map((h) => h.toJson()).toList(),
+      'customExercises': _customExercises.map((e) => e.toJson()).toList(),
+      'statistics': {
+        'totalWorkouts': _history.length,
+        'totalVolume':
+            _history.fold<double>(0, (sum, h) => sum + h.totalVolume),
+        'totalMinutes': _history.fold<int>(0, (sum, h) => sum + h.duration),
+        'currentStreak': streak,
+      },
+    };
+    return const JsonEncoder.withIndent('  ').convert(exportData);
+  }
+
+  // Import data from JSON string
+  Future<bool> importData(String jsonData) async {
+    try {
+      final data = jsonDecode(jsonData) as Map<String, dynamic>;
+
+      // Import history
+      if (data['history'] != null) {
+        final historyList = (data['history'] as List)
+            .map((h) => WorkoutHistory.fromJson(h))
+            .toList();
+        _history = historyList..sort((a, b) => b.date.compareTo(a.date));
+      }
+
+      // Import custom exercises
+      if (data['customExercises'] != null) {
+        _customExercises = (data['customExercises'] as List)
+            .map((e) => Exercise.fromJson(e))
+            .toList();
+      }
+
+      await _saveState();
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _errorMessage = 'Failed to import data: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
+
   @override
   void dispose() {
     _timer?.cancel();

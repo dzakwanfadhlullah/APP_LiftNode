@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:share_plus/share_plus.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 import '../core/app_theme.dart';
 import '../core/shared_widgets.dart';
 import '../core/workout_provider.dart';
@@ -883,11 +886,10 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
           const GymDivider(height: 1),
           _buildAccountTile(
-            icon: LucideIcons.cloud,
-            title: 'Cloud Sync',
-            subtitle: 'Backup your data',
-            trailing:
-                const GymBadge(text: 'SOON', color: AppColors.brandSecondary),
+            icon: LucideIcons.download,
+            title: 'Export Data',
+            subtitle: 'Save workout history as file',
+            onTap: () => _exportData(context),
           ),
           const GymDivider(height: 1),
           _buildAccountTile(
@@ -921,7 +923,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void _confirmResetHistory(BuildContext context) {
-    HapticFeedback.heavyImpact();
+    if (!kIsWeb) HapticFeedback.heavyImpact();
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -953,6 +955,50 @@ class _ProfileScreenState extends State<ProfileScreen>
         ],
       ),
     );
+  }
+
+  Future<void> _exportData(BuildContext context) async {
+    if (!kIsWeb) HapticFeedback.lightImpact();
+
+    try {
+      final provider = context.read<WorkoutProvider>();
+      final exportData = provider.getExportData();
+      final fileName =
+          'gym_tracker_backup_${DateTime.now().millisecondsSinceEpoch}.json';
+
+      if (kIsWeb) {
+        // On web, copy to clipboard
+        await Clipboard.setData(ClipboardData(text: exportData));
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Data copied to clipboard! Paste it to save.'),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      } else {
+        // On mobile, save to file and share
+        final directory = await getTemporaryDirectory();
+        final file = File('${directory.path}/$fileName');
+        await file.writeAsString(exportData);
+
+        await Share.shareXFiles(
+          [XFile(file.path)],
+          subject: 'Gym Tracker Backup',
+          text: 'My Gym Tracker workout history backup',
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: ${e.toString()}'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildAccountTile({

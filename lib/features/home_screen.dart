@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import '../core/app_theme.dart';
 import '../core/shared_widgets.dart';
@@ -166,7 +167,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _showStreakDetails(BuildContext context) {
-    HapticFeedback.lightImpact();
+    if (!kIsWeb) HapticFeedback.lightImpact();
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.bgCard,
@@ -277,7 +278,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         colors: [AppColors.brandPrimary, Color(0xFF8BD56B)],
       ),
       onTap: () {
-        HapticFeedback.mediumImpact();
+        if (!kIsWeb) HapticFeedback.mediumImpact();
         workoutProvider.startWorkout();
       },
       onLongPress: () => _showQuickActions(context),
@@ -334,7 +335,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _showQuickActions(BuildContext context) {
-    HapticFeedback.heavyImpact();
+    if (!kIsWeb) HapticFeedback.heavyImpact();
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.bgCard,
@@ -457,7 +458,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _toggleChartPeriod() {
-    HapticFeedback.selectionClick();
+    if (!kIsWeb) HapticFeedback.selectionClick();
     setState(() {
       _chartPeriod = _chartPeriod == 'week' ? 'month' : 'week';
     });
@@ -541,7 +542,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   void _showSessionDetails(BuildContext context, WorkoutHistory session) {
-    HapticFeedback.lightImpact();
+    if (!kIsWeb) HapticFeedback.lightImpact();
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.bgCard,
@@ -818,7 +819,7 @@ class _HistoryItem extends StatelessWidget {
   }
 
   void _showHistoryDetails(BuildContext context) {
-    HapticFeedback.lightImpact();
+    if (!kIsWeb) HapticFeedback.lightImpact();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('${workout.name} details coming soon!')),
     );
