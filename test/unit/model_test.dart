@@ -60,6 +60,7 @@ void main() {
         id: 'ae1',
         exerciseId: 'ex1',
         name: 'Bench Press',
+        muscle: 'Chest',
         sets: [
           WorkoutSet(id: 's1', kg: '100', reps: '10'),
         ],

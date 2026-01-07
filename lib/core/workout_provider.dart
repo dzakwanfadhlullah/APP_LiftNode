@@ -105,18 +105,44 @@ class WorkoutProvider with ChangeNotifier {
       double totalVolume = 0;
       List<String> exerciseNames = [];
       Set<String> muscleGroups = {};
+      int prCount = 0;
+
+      // Track exercise PRs (max volume per exercise)
+      Map<String, double> exerciseMaxVolume = {};
+
+      // Get previous max volumes from history
+      for (var h in _history) {
+        for (int i = 0; i < h.exercises.length; i++) {
+          final exName = h.exercises[i];
+          // Simple estimation: totalVolume / numExercises as per-exercise volume
+          final estVolume = h.totalVolume / h.exercises.length;
+          exerciseMaxVolume[exName] =
+              (exerciseMaxVolume[exName] ?? 0) > estVolume
+                  ? exerciseMaxVolume[exName]!
+                  : estVolume;
+        }
+      }
 
       for (var ex in _exercises) {
         exerciseNames.add(ex.name);
+        muscleGroups.add(ex.muscle); // Use actual muscle from exercise
+
+        double exVolume = 0;
         for (var set in ex.sets) {
           if (set.completed) {
             final kg = double.tryParse(set.kg) ?? 0;
             final reps = int.tryParse(set.reps) ?? 0;
-            totalVolume += kg * reps;
+            final setVolume = kg * reps;
+            totalVolume += setVolume;
+            exVolume += setVolume;
           }
         }
-        // Simplified muscle group mapping
-        muscleGroups.add('Full Body');
+
+        // Check if this is a PR for this exercise
+        final prevMax = exerciseMaxVolume[ex.name] ?? 0;
+        if (exVolume > prevMax && exVolume > 0) {
+          prCount++;
+        }
       }
 
       final newHistory = WorkoutHistory(
@@ -127,6 +153,7 @@ class WorkoutProvider with ChangeNotifier {
         totalVolume: totalVolume,
         exercises: exerciseNames,
         muscleGroups: muscleGroups.toList(),
+        prCount: prCount,
       );
 
       _history = [newHistory, ..._history];
@@ -315,6 +342,7 @@ class WorkoutProvider with ChangeNotifier {
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       exerciseId: exercise.id,
       name: exercise.name,
+      muscle: exercise.muscle,
       sets: [WorkoutSet(id: 's1', kg: '', reps: '', completed: false)],
     );
     _exercises = [..._exercises, newActive];
