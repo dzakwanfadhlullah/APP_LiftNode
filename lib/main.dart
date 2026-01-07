@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
 import 'core/app_theme.dart';
 import 'core/workout_provider.dart';
+import 'core/settings_provider.dart';
 import 'core/shared_widgets.dart';
 import 'features/home_screen.dart';
 import 'features/history_screen.dart';
@@ -15,7 +16,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 void main() {
   runApp(
     MultiProvider(
-      providers: [ChangeNotifierProvider(create: (_) => WorkoutProvider())],
+      providers: [
+        ChangeNotifierProvider(create: (_) => WorkoutProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+      ],
       child: const GlobalErrorBoundary(
         child: GymTrackerApp(),
       ),

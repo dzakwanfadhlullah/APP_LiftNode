@@ -9,6 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import '../core/app_theme.dart';
 import '../core/shared_widgets.dart';
 import '../core/workout_provider.dart';
+import '../core/settings_provider.dart';
 
 // =============================================================================
 // PHASE 6: PROFILE SCREEN ENHANCEMENTS
@@ -23,14 +24,12 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
-  // 6.3 Settings state
+  // Local state synced with SettingsProvider
   bool _notificationsEnabled = true;
   bool _hapticFeedbackEnabled = true;
   bool _autoRestTimer = true;
   int _defaultRestSeconds = 90;
   String _weightUnit = 'kg';
-
-  // 6.4 Theme state
   String _selectedTheme = 'dark';
   Color _accentColor = AppColors.brandPrimary;
 
@@ -49,6 +48,23 @@ class _ProfileScreenState extends State<ProfileScreen>
       CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
     );
     _animController.forward();
+
+    // Sync with SettingsProvider after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncWithSettings();
+    });
+  }
+
+  void _syncWithSettings() {
+    final settings = context.read<SettingsProvider>();
+    setState(() {
+      _notificationsEnabled = settings.notificationsEnabled;
+      _hapticFeedbackEnabled = settings.hapticFeedbackEnabled;
+      _autoRestTimer = settings.autoRestTimer;
+      _defaultRestSeconds = settings.defaultRestSeconds;
+      _weightUnit = settings.weightUnit;
+      _accentColor = settings.accentColor;
+    });
   }
 
   @override
@@ -457,7 +473,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             title: 'Notifications',
             subtitle: 'Workout reminders & updates',
             value: _notificationsEnabled,
-            onChanged: (v) => setState(() => _notificationsEnabled = v),
+            onChanged: (v) {
+              setState(() => _notificationsEnabled = v);
+              context.read<SettingsProvider>().setNotificationsEnabled(v);
+            },
           ),
           const GymDivider(height: 1),
           _buildToggleTile(
@@ -465,7 +484,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             title: 'Haptic Feedback',
             subtitle: 'Vibration on button press',
             value: _hapticFeedbackEnabled,
-            onChanged: (v) => setState(() => _hapticFeedbackEnabled = v),
+            onChanged: (v) {
+              setState(() => _hapticFeedbackEnabled = v);
+              context.read<SettingsProvider>().setHapticFeedbackEnabled(v);
+            },
           ),
           const GymDivider(height: 1),
           _buildToggleTile(
@@ -473,7 +495,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             title: 'Auto Rest Timer',
             subtitle: 'Start timer after set completion',
             value: _autoRestTimer,
-            onChanged: (v) => setState(() => _autoRestTimer = v),
+            onChanged: (v) {
+              setState(() => _autoRestTimer = v);
+              context.read<SettingsProvider>().setAutoRestTimer(v);
+            },
           ),
           const GymDivider(height: 1),
           _buildOptionTile(
@@ -601,6 +626,9 @@ class _ProfileScreenState extends State<ProfileScreen>
                 return GestureDetector(
                   onTap: () {
                     setState(() => _defaultRestSeconds = seconds);
+                    context
+                        .read<SettingsProvider>()
+                        .setDefaultRestSeconds(seconds);
                     Navigator.pop(context);
                   },
                   child: Container(
@@ -667,6 +695,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: GestureDetector(
                     onTap: () {
                       setState(() => _weightUnit = unit);
+                      context.read<SettingsProvider>().setWeightUnit(unit);
                       Navigator.pop(context);
                     },
                     child: Container(
@@ -789,6 +818,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                       onTap: () {
                         if (!kIsWeb) HapticFeedback.selectionClick();
                         setState(() => _accentColor = color);
+                        context.read<SettingsProvider>().setAccentColor(color);
                       },
                       child: AnimatedContainer(
                         duration: AppAnimations.fast,
