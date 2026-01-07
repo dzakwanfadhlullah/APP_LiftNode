@@ -11,5 +11,6 @@
 /// - gym_display_widgets.dart → GymTypography, GymDivider, GymAvatar,
 ///                              GymProgressBar, GymListTile, GymEmptyState
 /// - global_error_boundary.dart → GlobalErrorBoundary
+library shared_widgets;
 
 export 'widgets/widgets.dart';

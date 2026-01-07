@@ -721,7 +721,10 @@ class _ExerciseCard extends StatelessWidget {
               icon: LucideIcons.trash2,
               label: 'Remove Exercise',
               color: AppColors.error,
-              onTap: () => Navigator.pop(context),
+              onTap: () {
+                Navigator.pop(context);
+                context.read<WorkoutProvider>().removeExercise(exercise.id);
+              },
             ),
             Spacing.vLg,
           ],

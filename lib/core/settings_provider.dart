@@ -111,7 +111,7 @@ class SettingsProvider with ChangeNotifier {
         // Theme
         _themeMode = ThemeMode.values[json['themeMode'] ?? 0];
         _accentColor =
-            Color(json['accentColor'] ?? AppColors.brandPrimary.value);
+            Color(json['accentColor'] ?? AppColors.brandPrimary.toARGB32());
 
         // Preferences
         _notificationsEnabled = json['notificationsEnabled'] ?? true;
@@ -135,7 +135,7 @@ class SettingsProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final data = jsonEncode({
         'themeMode': _themeMode.index,
-        'accentColor': _accentColor.value,
+        'accentColor': _accentColor.toARGB32(),
         'notificationsEnabled': _notificationsEnabled,
         'hapticFeedbackEnabled': _hapticFeedbackEnabled,
         'autoRestTimer': _autoRestTimer,

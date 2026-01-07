@@ -240,7 +240,7 @@ class WorkoutProvider with ChangeNotifier {
   void _saveStateDebounced() {
     _saveDebounce?.cancel();
     _saveDebounce = Timer(
-      Duration(milliseconds: _saveDebounceMs),
+      const Duration(milliseconds: _saveDebounceMs),
       () => _saveState(),
     );
   }

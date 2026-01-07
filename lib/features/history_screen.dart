@@ -532,7 +532,7 @@ class _HistoryScreenState extends State<HistoryScreen>
                   .copyWith(color: AppColors.textSecondary),
             ),
             Spacing.vXs,
-            Text(
+            const Text(
               'Complete workouts to track your personal records',
               style: AppTypography.caption,
               textAlign: TextAlign.center,

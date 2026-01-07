@@ -45,6 +45,11 @@ Items deferred from V1.2 that require significant implementation effort.
 - **Reason:** Feature not implemented
 - **Effort:** Low
 
+### Replace Exercise (during workout)
+- **Phase:** 10.1
+- **Reason:** Option exists but just closes modal, needs picker UI
+- **Effort:** Medium
+
 ### Set Types Selection (Warmup/Failure)
 - **Phase:** 6.1
 - **Reason:** UI exists, needs connection
@@ -68,6 +73,11 @@ Items deferred from V1.2 that require significant implementation effort.
 ### Configurable Rest Timer from Profile
 - **Phase:** 6.1
 - **Reason:** Setting exists but not connected to timer
+- **Effort:** Low
+
+### Exercise Info Modal (during workout)
+- **Phase:** 9.2
+- **Reason:** Option exists but just closes modal, no info shown
 - **Effort:** Low
 
 ---
@@ -202,6 +212,49 @@ Items deferred from V1.2 that require significant implementation effort.
 2. Achievements Unlock Logic
 3. Workout Templates
 4. Exercise Images
+
+---
+
+## 📸 New Features (from Phase 10.2)
+
+### Progress Photos
+- **Phase:** 10.2
+- **Reason:** Camera/gallery integration, photo timeline
+- **Effort:** High
+
+### Cloud Backup
+- **Phase:** 10.2
+- **Reason:** Firebase/Supabase integration for sync
+- **Effort:** High
+
+### Social Features
+- **Phase:** 10.2
+- **Reason:** Share workout summary, export to image
+- **Effort:** Medium
+
+### Advanced Analytics
+- **Phase:** 10.2
+- **Reason:** Muscle balance wheel, monthly/yearly reports
+- **Effort:** High
+
+---
+
+## ♿ Accessibility
+
+### Larger Touch Targets Option
+- **Phase:** 10.2
+- **Reason:** Accessibility enhancement
+- **Effort:** Low
+
+### Screen Reader Support
+- **Phase:** 10.2
+- **Reason:** Accessibility requirement
+- **Effort:** Medium
+
+### Reduced Motion Option
+- **Phase:** 10.2
+- **Reason:** Accessibility enhancement
+- **Effort:** Low
 
 ---
 

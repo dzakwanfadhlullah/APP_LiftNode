@@ -1,5 +1,6 @@
 /// Barrel file to export all widgets from the widgets folder
 /// This provides a single import for all shared widgets
+library widgets;
 
 export 'gym_card.dart';
 export 'neon_button.dart';
