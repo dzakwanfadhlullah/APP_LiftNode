@@ -255,7 +255,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                 ),
                 Spacing.vMd,
                 // Name
-                const Text('Dzakwan', style: AppTypography.displayMedium),
+                Consumer<SettingsProvider>(
+                  builder: (context, settings, child) {
+                    return Text(settings.userName,
+                        style: AppTypography.displayMedium);
+                  },
+                ),
                 Spacing.vXxs,
                 // Streak info
                 Row(

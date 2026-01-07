@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../core/app_theme.dart';
 import '../core/shared_widgets.dart';
 import '../core/workout_provider.dart';
+import '../core/settings_provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/models.dart';
@@ -77,43 +78,47 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildHeader(BuildContext context) {
     return Padding(
       padding: Spacing.paddingScreen,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
+      child: Consumer<SettingsProvider>(
+        builder: (context, settings, child) {
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              GestureDetector(
-                onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                      content: Text('Profile settings coming soon!')),
-                ),
-                child: const GymAvatar(
-                  name: 'Dzakwan',
-                  size: 44,
-                  borderColor: AppColors.brandPrimary,
-                ),
-              ),
-              Spacing.hMd,
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
-                  Text(
-                    _getDynamicGreeting().toUpperCase(),
-                    style: AppTypography.overline.copyWith(
-                      color: AppColors.textSecondary,
+                  GestureDetector(
+                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text('Profile settings coming soon!')),
+                    ),
+                    child: GymAvatar(
+                      name: settings.userName,
+                      size: 44,
+                      borderColor: AppColors.brandPrimary,
                     ),
                   ),
-                  Spacing.vXxs,
-                  const Text(
-                    'Dzakwan',
-                    style: AppTypography.headlineMedium,
+                  Spacing.hMd,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        _getDynamicGreeting().toUpperCase(),
+                        style: AppTypography.overline.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                      Spacing.vXxs,
+                      Text(
+                        settings.userName,
+                        style: AppTypography.headlineMedium,
+                      ),
+                    ],
                   ),
                 ],
               ),
+              _buildStreakBadge(context),
             ],
-          ),
-          _buildStreakBadge(context),
-        ],
+          );
+        },
       ),
     );
   }
