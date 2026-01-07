@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../app_theme.dart';
 
 // =============================================================================
@@ -20,6 +21,10 @@ class GymInput extends StatelessWidget {
   final bool enabled;
   final int? maxLines;
   final FocusNode? focusNode;
+  final List<TextInputFormatter>? inputFormatters;
+  final TextAlign textAlign;
+  final int? maxLength;
+  final bool autofocus;
 
   const GymInput({
     super.key,
@@ -36,7 +41,55 @@ class GymInput extends StatelessWidget {
     this.enabled = true,
     this.maxLines = 1,
     this.focusNode,
+    this.inputFormatters,
+    this.textAlign = TextAlign.start,
+    this.maxLength,
+    this.autofocus = false,
   });
+
+  /// Convenient constructor for numeric input (integers only)
+  GymInput.numeric({
+    super.key,
+    this.label,
+    this.hint,
+    this.errorText,
+    this.controller,
+    this.prefixIcon,
+    this.suffixIcon,
+    this.onSuffixTap,
+    this.onChanged,
+    this.enabled = true,
+    this.focusNode,
+    this.maxLength,
+    this.autofocus = false,
+  })  : keyboardType = TextInputType.number,
+        obscureText = false,
+        maxLines = 1,
+        inputFormatters = [FilteringTextInputFormatter.digitsOnly],
+        textAlign = TextAlign.center;
+
+  /// Convenient constructor for decimal input (e.g., weight)
+  GymInput.decimal({
+    super.key,
+    this.label,
+    this.hint,
+    this.errorText,
+    this.controller,
+    this.prefixIcon,
+    this.suffixIcon,
+    this.onSuffixTap,
+    this.onChanged,
+    this.enabled = true,
+    this.focusNode,
+    this.maxLength,
+    this.autofocus = false,
+  })  : keyboardType = const TextInputType.numberWithOptions(decimal: true),
+        obscureText = false,
+        maxLines = 1,
+        inputFormatters = [
+          FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+        ],
+        textAlign = TextAlign.center;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +109,10 @@ class GymInput extends StatelessWidget {
           enabled: enabled,
           maxLines: maxLines,
           focusNode: focusNode,
+          inputFormatters: inputFormatters,
+          textAlign: textAlign,
+          maxLength: maxLength,
+          autofocus: autofocus,
           style:
               AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
           decoration: InputDecoration(
@@ -63,6 +120,7 @@ class GymInput extends StatelessWidget {
             hintStyle:
                 AppTypography.bodyMedium.copyWith(color: AppColors.textMuted),
             errorText: errorText,
+            counterText: '', // Hide character counter
             prefixIcon: prefixIcon != null
                 ? Icon(prefixIcon, size: 20, color: AppColors.textSecondary)
                 : null,
