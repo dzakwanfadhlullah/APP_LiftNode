@@ -517,12 +517,12 @@ pengalaman yang memukau dengan animasi, ilustrasi, dan feel premium.
    - Success konfirmasi animation
 
 ### Deliverables:
-- [ ] `AnimatedAuroraBackground` widget
-- [ ] `PremiumProgressIndicator` widget
-- [ ] `SelectableNumberBadge` widget
-- [ ] `AnimatedSegmentedControl` widget
-- [ ] Page transition animations (slide + fade)
-- [ ] Welcome animation sequence
+- [x] `AnimatedAuroraBackground` widget
+- [x] `PremiumProgressIndicator` widget
+- [x] `SelectableNumberBadge` widget
+- [x] `AnimatedSegmentedControl` widget
+- [x] Page transition animations (slide + fade)
+- [x] Welcome animation sequence
 
 ---
 

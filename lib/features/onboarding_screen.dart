@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../core/app_theme.dart';
 import '../core/shared_widgets.dart';
 import '../core/settings_provider.dart';
+import '../core/widgets/animated_aurora_background.dart';
+import '../core/widgets/premium_onboarding_widgets.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -53,13 +54,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bgMain,
-      body: SafeArea(
+    return AnimatedAuroraBackground(
+      child: SafeArea(
         child: Column(
           children: [
             // Progress Bar
-            _buildProgressBar(),
+            PremiumProgressIndicator(
+              totalSteps: _totalPages,
+              currentStep: _currentPage,
+            ),
 
             Expanded(
               child: PageView(
@@ -116,28 +119,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
-  Widget _buildProgressBar() {
-    return Container(
-      padding: Spacing.paddingScreen,
-      child: Row(
-        children: List.generate(_totalPages, (index) {
-          final isActive = index <= _currentPage;
-          return Expanded(
-            child: AnimatedContainer(
-              duration: AppAnimations.normal,
-              height: 4,
-              margin: EdgeInsets.only(right: index == _totalPages - 1 ? 0 : 8),
-              decoration: BoxDecoration(
-                color: isActive ? AppColors.brandPrimary : AppColors.border,
-                borderRadius: AppRadius.roundedFull,
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
   Widget _buildWelcomeStep() {
     return SingleChildScrollView(
       padding: Spacing.paddingScreen,
@@ -145,33 +126,68 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 40),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.brandPrimary.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(LucideIcons.dumbbell,
-                size: 48, color: AppColors.brandPrimary),
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0.0, end: 1.0),
+            duration: const Duration(milliseconds: 800),
+            builder: (context, value, child) {
+              return Transform.scale(
+                scale: 0.8 + (0.2 * value),
+                child: Opacity(
+                  opacity: value,
+                  child: Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: AppColors.brandPrimary.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.brandPrimary.withValues(alpha: 0.2),
+                          blurRadius: 30 * value,
+                          spreadRadius: 10 * value,
+                        ),
+                      ],
+                    ),
+                    child: const Icon(LucideIcons.dumbbell,
+                        size: 64, color: AppColors.brandPrimary),
+                  ),
+                ),
+              );
+            },
           ),
           Spacing.vXl,
-          const Text('Welcome to\nGym Tracker Pro',
-              style: AppTypography.displayMedium),
+          _buildStaggerText(
+            'Welcome to\nGym Tracker Pro',
+            AppTypography.displayMedium,
+            delayMs: 300,
+          ),
           Spacing.vMd,
-          Text(
+          _buildStaggerText(
             'Your ultimate companion for strength and progress. Let\'s get you set up.',
-            style: AppTypography.bodyLarge
-                .copyWith(color: AppColors.textSecondary),
+            AppTypography.bodyLarge.copyWith(color: AppColors.textSecondary),
+            delayMs: 600,
           ),
           Spacing.vXxl,
-          GymInput(
-            controller: _nameController,
-            label: 'WHAT IS YOUR NAME?',
-            hint: 'Athlete',
-            prefixIcon: LucideIcons.user,
+          _buildStaggerText(
+            '',
+            const TextStyle(),
+            delayMs: 900,
+            child: GymInput(
+              controller: _nameController,
+              label: 'WHAT IS YOUR NAME?',
+              hint: 'Athlete',
+              prefixIcon: LucideIcons.user,
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildStaggerText(String text, TextStyle style,
+      {int delayMs = 0, Widget? child}) {
+    return _StaggeredFadeItem(
+      delay: Duration(milliseconds: delayMs),
+      child: child ?? Text(text, style: style),
     );
   }
 
@@ -190,50 +206,43 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 .copyWith(color: AppColors.textSecondary),
           ),
           Spacing.vXxl,
-          Wrap(
-            spacing: 12,
-            runSpacing: 12,
-            children: List.generate(7, (index) {
-              final val = index + 1;
-              final isSelected = _weeklyGoal == val;
-              return GestureDetector(
-                onTap: () {
-                  HapticFeedback.selectionClick();
-                  setState(() => _weeklyGoal = val);
-                },
-                child: AnimatedContainer(
-                  duration: AppAnimations.fast,
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color:
-                        isSelected ? AppColors.brandPrimary : AppColors.bgCard,
-                    borderRadius: AppRadius.roundedMd,
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.brandPrimary
-                          : AppColors.border,
-                      width: 2,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      val.toString(),
-                      style: AppTypography.displaySmall.copyWith(
-                        color:
-                            isSelected ? Colors.black : AppColors.textPrimary,
-                      ),
-                    ),
+          Center(
+            child: Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: List.generate(7, (index) {
+                final val = index + 1;
+                final isSelected = _weeklyGoal == val;
+                return SelectableNumberBadge(
+                  number: val,
+                  isSelected: isSelected,
+                  onTap: () => setState(() => _weeklyGoal = val),
+                );
+              }),
+            ),
+          ),
+          Spacing.vXxl,
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.bgCard.withValues(alpha: 0.5),
+              borderRadius: AppRadius.roundedMd,
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                const Icon(LucideIcons.info,
+                    size: 20, color: AppColors.brandPrimary),
+                Spacing.hMd,
+                Expanded(
+                  child: Text(
+                    'Recommended for beginners: 3-4 days',
+                    style: AppTypography.bodySmall
+                        .copyWith(fontStyle: FontStyle.italic),
                   ),
                 ),
-              );
-            }),
-          ),
-          Spacing.vXl,
-          Text(
-            'Recommended for beginners: 3-4 days',
-            style:
-                AppTypography.bodySmall.copyWith(fontStyle: FontStyle.italic),
+              ],
+            ),
           ),
         ],
       ),
@@ -255,67 +264,66 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 .copyWith(color: AppColors.textSecondary),
           ),
           Spacing.vXxl,
-          _buildUnitSelector(),
+          AnimatedSegmentedControl(
+            selectedValue: _weightUnit,
+            values: const ['kg', 'lbs'],
+            labels: const ['Kilograms (kg)', 'Pounds (lbs)'],
+            onChanged: (val) => setState(() => _weightUnit = val),
+          ),
           Spacing.vXxl,
-          const Row(
-            children: [
-              Icon(LucideIcons.shieldCheck, color: AppColors.success, size: 20),
-              Spacing.hMd,
-              Expanded(
-                child: Text(
-                  'Your data is stored locally on this device.',
-                  style: AppTypography.bodySmall,
+          GlassCard.frosted(
+            child: Row(
+              children: [
+                const Icon(LucideIcons.shieldCheck,
+                    color: AppColors.success, size: 20),
+                Spacing.hMd,
+                Expanded(
+                  child: Text(
+                    'Your data is stored locally on this device.',
+                    style: AppTypography.bodySmall,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUnitSelector() {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.bgCard,
-        borderRadius: AppRadius.roundedLg,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Row(
-        children: [
-          _buildUnitOption('kg', 'Kilograms'),
-          _buildUnitOption('lbs', 'Pounds'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUnitOption(String val, String label) {
-    final isSelected = _weightUnit == val;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          HapticFeedback.selectionClick();
-          setState(() => _weightUnit = val);
-        },
-        child: AnimatedContainer(
-          duration: AppAnimations.fast,
-          padding: const EdgeInsets.symmetric(vertical: 20),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.brandPrimary : Colors.transparent,
-            borderRadius: val == 'kg'
-                ? const BorderRadius.horizontal(left: Radius.circular(15))
-                : const BorderRadius.horizontal(right: Radius.circular(15)),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: AppTypography.labelLarge.copyWith(
-                color: isSelected ? Colors.black : AppColors.textSecondary,
-              ),
+              ],
             ),
           ),
-        ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StaggeredFadeItem extends StatefulWidget {
+  final Widget child;
+  final Duration delay;
+
+  const _StaggeredFadeItem({required this.child, required this.delay});
+
+  @override
+  State<_StaggeredFadeItem> createState() => _StaggeredFadeItemState();
+}
+
+class _StaggeredFadeItemState extends State<_StaggeredFadeItem> {
+  bool _visible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(widget.delay, () {
+      if (mounted) setState(() => _visible = true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedOpacity(
+      opacity: _visible ? 1.0 : 0.0,
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOut,
+      child: AnimatedPadding(
+        duration: const Duration(milliseconds: 600),
+        curve: Curves.easeOutCubic,
+        padding: EdgeInsets.only(top: _visible ? 0 : 20),
+        child: widget.child,
       ),
     );
   }
