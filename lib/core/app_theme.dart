@@ -184,12 +184,16 @@ class Spacing {
   static const double xxl = 48.0; // 48px
   static const double xxxl = 64.0; // 64px
 
-  // Semantic spacing
-  static const double cardPadding = 16.0;
-  static const double sectionGap = 24.0;
-  static const double screenPadding = 16.0;
+  // ─────────────────────────────────────────────────────────────────────────
+  // PHASE 1.4 V1.2: UPDATED SEMANTIC SPACING (more generous, Apple-style)
+  // ─────────────────────────────────────────────────────────────────────────
+  static const double cardPadding = 20.0; // Was 16, now 20 for breathing room
+  static const double sectionGap = 32.0; // Was 24, now 32 for clear separation
+  static const double screenPadding = 20.0; // Was 16, now 20 for edge comfort
   static const double itemGap = 12.0;
-  static const double inputPadding = 12.0;
+  static const double inputPadding = 14.0; // Was 12, now 14 for touch targets
+  static const double comfortPadding = 24.0; // NEW: for extra breathing room
+  static const double heroSpacing = 40.0; // NEW: for hero sections
 
   // Widget helpers
   static const SizedBox hXxs = SizedBox(width: xxs);
@@ -206,16 +210,24 @@ class Spacing {
   static const SizedBox vLg = SizedBox(height: lg);
   static const SizedBox vXl = SizedBox(height: xl);
   static const SizedBox vXxl = SizedBox(height: xxl);
+  static const SizedBox vXxxl = SizedBox(height: xxxl); // NEW
+  static const SizedBox vHero = SizedBox(height: heroSpacing); // NEW
 
   // EdgeInsets helpers
   static const EdgeInsets paddingCard = EdgeInsets.all(cardPadding);
   static const EdgeInsets paddingScreen = EdgeInsets.all(screenPadding);
+  static const EdgeInsets paddingComfort =
+      EdgeInsets.all(comfortPadding); // NEW
   static const EdgeInsets paddingHorizontalLg =
       EdgeInsets.symmetric(horizontal: lg);
   static const EdgeInsets paddingHorizontalMd =
       EdgeInsets.symmetric(horizontal: md);
+  static const EdgeInsets paddingHorizontalScreen =
+      EdgeInsets.symmetric(horizontal: screenPadding); // NEW
   static const EdgeInsets paddingBadge =
       EdgeInsets.symmetric(horizontal: sm, vertical: xxs);
+  static const EdgeInsets paddingButton =
+      EdgeInsets.symmetric(horizontal: lg, vertical: md); // NEW
 }
 
 // =============================================================================
@@ -453,6 +465,102 @@ class AppTypography {
     height: 1.2,
     color: AppColors.textPrimary,
   );
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PHASE 1.4 V1.2: PREMIUM TYPOGRAPHY STYLES
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Hero title for splash/onboarding screens - 40px, extra bold
+  static const TextStyle heroTitle = TextStyle(
+    fontSize: 40,
+    fontWeight: FontWeight.w800,
+    letterSpacing: -1.5,
+    height: 1.1,
+    color: AppColors.textPrimary,
+  );
+
+  /// Display hero - 36px, untuk headlines utama
+  static const TextStyle displayHero = TextStyle(
+    fontSize: 36,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -1.0,
+    height: 1.15,
+    color: AppColors.textPrimary,
+  );
+
+  /// Stat highlight - 48px, untuk angka besar yang eye-catching
+  static const TextStyle statHighlight = TextStyle(
+    fontSize: 48,
+    fontWeight: FontWeight.w800,
+    letterSpacing: -2.0,
+    height: 1.0,
+    color: AppColors.textPrimary,
+  );
+
+  /// Stat large - 36px, untuk angka medium
+  static const TextStyle statLarge = TextStyle(
+    fontSize: 36,
+    fontWeight: FontWeight.w700,
+    letterSpacing: -1.0,
+    height: 1.1,
+    color: AppColors.textPrimary,
+  );
+
+  /// Mono style for numbers/timers
+  static const TextStyle mono = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0.5,
+    height: 1.4,
+    fontFeatures: [FontFeature.tabularFigures()],
+    color: AppColors.textPrimary,
+  );
+
+  /// Mono large for timer displays
+  static const TextStyle monoLarge = TextStyle(
+    fontSize: 32,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 1.0,
+    height: 1.2,
+    fontFeatures: [FontFeature.tabularFigures()],
+    color: AppColors.textPrimary,
+  );
+
+  /// Quote style for motivational text
+  static const TextStyle quote = TextStyle(
+    fontSize: 18,
+    fontWeight: FontWeight.w500,
+    fontStyle: FontStyle.italic,
+    letterSpacing: 0,
+    height: 1.5,
+    color: AppColors.textSecondary,
+  );
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DYNAMIC TYPE SUPPORT (Accessibility)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Scale font size berdasarkan accessibility settings
+  /// [baseFontSize] - ukuran font default
+  /// [textScaleFactor] - dari MediaQuery.textScaleFactorOf(context)
+  /// [minScale] - minimum scale (default 0.8)
+  /// [maxScale] - maximum scale (default 1.5)
+  static double scaledFontSize(
+    double baseFontSize,
+    double textScaleFactor, {
+    double minScale = 0.8,
+    double maxScale = 1.5,
+  }) {
+    final clampedScale = textScaleFactor.clamp(minScale, maxScale);
+    return baseFontSize * clampedScale;
+  }
+
+  /// Get TextStyle dengan scaled font size
+  static TextStyle scaled(TextStyle base, double textScaleFactor) {
+    return base.copyWith(
+      fontSize: scaledFontSize(base.fontSize ?? 14, textScaleFactor),
+    );
+  }
 }
 
 // =============================================================================
@@ -1039,4 +1147,202 @@ class GlassBlur {
   static ImageFilter get blurMedium => blur(sigma: medium);
   static ImageFilter get blurHeavy => blur(sigma: heavy);
   static ImageFilter get blurExtreme => blur(sigma: extreme);
+}
+
+// =============================================================================
+// PHASE 1.4 V1.2: GRADIENT TEXT WIDGET
+// Widget untuk menampilkan text dengan gradient color (premium look)
+// =============================================================================
+
+class GradientText extends StatelessWidget {
+  final String text;
+  final TextStyle? style;
+  final Gradient gradient;
+  final TextAlign? textAlign;
+
+  const GradientText({
+    super.key,
+    required this.text,
+    this.style,
+    this.gradient = const LinearGradient(
+      colors: [AppColors.brandPrimary, AppColors.brandSecondary],
+    ),
+    this.textAlign,
+  });
+
+  /// Preset: Primary gradient (green to cyan)
+  const GradientText.primary({
+    super.key,
+    required this.text,
+    this.style,
+    this.textAlign,
+  }) : gradient = const LinearGradient(
+          colors: [AppColors.brandPrimary, AppColors.brandSecondary],
+        );
+
+  /// Preset: Accent gradient (purple to cyan)
+  const GradientText.accent({
+    super.key,
+    required this.text,
+    this.style,
+    this.textAlign,
+  }) : gradient = const LinearGradient(
+          colors: [AppColors.brandTertiary, AppColors.brandSecondary],
+        );
+
+  /// Preset: Warm gradient (orange to yellow)
+  const GradientText.warm({
+    super.key,
+    required this.text,
+    this.style,
+    this.textAlign,
+  }) : gradient = const LinearGradient(
+          colors: [Color(0xFFF97316), Color(0xFFFACC15)],
+        );
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      shaderCallback: (bounds) => gradient.createShader(
+        Rect.fromLTWH(0, 0, bounds.width, bounds.height),
+      ),
+      blendMode: BlendMode.srcIn,
+      child: Text(
+        text,
+        style: style ?? AppTypography.displayLarge,
+        textAlign: textAlign,
+      ),
+    );
+  }
+}
+
+// =============================================================================
+// PHASE 1.4 V1.2: SHIMMER TEXT WIDGET
+// Widget untuk text dengan shimmer effect (loading states)
+// =============================================================================
+
+class ShimmerText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+  final Color baseColor;
+  final Color highlightColor;
+  final Duration duration;
+  final TextAlign? textAlign;
+
+  const ShimmerText({
+    super.key,
+    required this.text,
+    this.style,
+    this.baseColor = AppColors.textMuted,
+    this.highlightColor = AppColors.textSecondary,
+    this.duration = const Duration(milliseconds: 1500),
+    this.textAlign,
+  });
+
+  @override
+  State<ShimmerText> createState() => _ShimmerTextState();
+}
+
+class _ShimmerTextState extends State<ShimmerText>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      duration: widget.duration,
+      vsync: this,
+    )..repeat();
+    _animation = Tween<double>(begin: -1.0, end: 2.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _animation,
+      builder: (context, child) {
+        return ShaderMask(
+          shaderCallback: (bounds) {
+            return LinearGradient(
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+              colors: [
+                widget.baseColor,
+                widget.highlightColor,
+                widget.baseColor,
+              ],
+              stops: [
+                _animation.value - 0.3,
+                _animation.value,
+                _animation.value + 0.3,
+              ].map((s) => s.clamp(0.0, 1.0)).toList(),
+            ).createShader(bounds);
+          },
+          blendMode: BlendMode.srcIn,
+          child: Text(
+            widget.text,
+            style: widget.style ?? AppTypography.bodyMedium,
+            textAlign: widget.textAlign,
+          ),
+        );
+      },
+    );
+  }
+}
+
+// =============================================================================
+// PHASE 1.4 V1.2: TEXT CONTRAST HELPER
+// Helper untuk memilih warna text yang readable berdasarkan background
+// =============================================================================
+
+class TextContrast {
+  TextContrast._();
+
+  /// Menentukan apakah background termasuk gelap
+  static bool isDark(Color backgroundColor) {
+    // Menggunakan relative luminance formula
+    final luminance = backgroundColor.computeLuminance();
+    return luminance < 0.5;
+  }
+
+  /// Mendapatkan warna text yang kontras dengan background
+  static Color getContrastColor(Color backgroundColor) {
+    return isDark(backgroundColor)
+        ? AppColors.textPrimary
+        : AppColors.textInverse;
+  }
+
+  /// Mendapatkan warna text secondary yang kontras
+  static Color getSecondaryContrastColor(Color backgroundColor) {
+    return isDark(backgroundColor)
+        ? AppColors.textSecondary
+        : AppColors.textInverse.withValues(alpha: 0.7);
+  }
+
+  /// Mendapatkan TextStyle dengan warna yang kontras
+  static TextStyle withContrast(TextStyle base, Color backgroundColor) {
+    return base.copyWith(color: getContrastColor(backgroundColor));
+  }
+
+  /// Preset untuk text di atas brand primary (hijau)
+  static const Color onPrimary = AppColors.onPrimary;
+
+  /// Preset untuk text di atas brand secondary (cyan)
+  static const Color onSecondary = AppColors.onSecondary;
+
+  /// Preset untuk text di atas warna gelap
+  static const Color onDark = AppColors.textPrimary;
+
+  /// Preset untuk text di atas warna terang
+  static const Color onLight = AppColors.textInverse;
 }

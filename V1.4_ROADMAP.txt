@@ -111,11 +111,13 @@ spacing yang lebih generous ala Apple Human Interface Guidelines.
    - New `comfortPadding: 24` untuk breathing room
 
 ### Deliverables:
-- [ ] Extended `AppTypography` dengan 5+ style baru
-- [ ] `GradientText` StatelessWidget
-- [ ] `ShimmerText` StatefulWidget
-- [ ] Updated `Spacing` constants
-- [ ] `TextContrast` helper untuk light/dark combinations
+- [x] Extended `AppTypography` dengan 5+ style baru ✅ (7 styles: heroTitle, displayHero, statHighlight, statLarge, mono, monoLarge, quote)
+- [x] `GradientText` StatelessWidget ✅ (dengan 3 presets: primary, accent, warm)
+- [x] `ShimmerText` StatefulWidget ✅
+- [x] Updated `Spacing` constants ✅ (cardPadding 20, sectionGap 32, comfortPadding, heroSpacing)
+- [x] `TextContrast` helper untuk light/dark combinations ✅
+- [x] `AppTypography.scaledFontSize()` untuk accessibility ✅ (BONUS)
+- [x] `AppTypography.scaled()` method ✅ (BONUS)
 
 ---
 
