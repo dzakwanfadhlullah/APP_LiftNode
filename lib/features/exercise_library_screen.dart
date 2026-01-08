@@ -204,7 +204,13 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(ex.name, style: AppTypography.titleMedium),
+                  Hero(
+                    tag: 'exercise_name_${ex.id}',
+                    child: Material(
+                      color: Colors.transparent,
+                      child: Text(ex.name, style: AppTypography.titleMedium),
+                    ),
+                  ),
                   Spacing.vXxs,
                   Text(
                     ex.muscle,
@@ -387,8 +393,14 @@ class _ExerciseDetailSheet extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(exercise.name, style: AppTypography.headlineSmall),
-                    Spacing.vXxs,
+                    Hero(
+                      tag: 'exercise_name_${exercise.id}',
+                      child: Material(
+                        color: Colors.transparent,
+                        child: Text(exercise.name,
+                            style: AppTypography.headlineSmall),
+                      ),
+                    ),
                     GymBadge(
                       text: exercise.muscle,
                       color: AppColors.brandPrimary,

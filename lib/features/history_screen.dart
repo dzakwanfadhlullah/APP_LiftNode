@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:fl_chart/fl_chart.dart';
 import '../core/workout_provider.dart';
 import '../core/app_theme.dart';
 import '../core/shared_widgets.dart';
@@ -389,9 +391,82 @@ class _HistoryScreenState extends State<HistoryScreen>
           _buildMuscleDistribution(
               stats['muscleDistribution'] as Map<String, int>),
           Spacing.vXl,
+          const Text('Workout Activity', style: AppTypography.headlineSmall),
+          Spacing.vMd,
+          _buildActivityHeatmap(),
+          Spacing.vXl,
           const Text('Recent PRs', style: AppTypography.headlineSmall),
           Spacing.vMd,
           _buildRecentPRs(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityHeatmap() {
+    final history = context.watch<WorkoutProvider>().history;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    // Last 12 weeks (84 days)
+    const weeks = 12;
+    const days = weeks * 7;
+    final startDate = today.subtract(const Duration(days: days - 1));
+
+    // Map workouts to dates
+    final workoutDates = <DateTime, int>{};
+    for (var w in history) {
+      final date = DateTime(w.date.year, w.date.month, w.date.day);
+      workoutDates[date] = (workoutDates[date] ?? 0) + 1;
+    }
+
+    return GymCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Consistency', style: AppTypography.labelMedium),
+              Text('${history.length} workouts total',
+                  style: AppTypography.caption),
+            ],
+          ),
+          Spacing.vMd,
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(weeks, (wIdx) {
+                return Column(
+                  children: List.generate(7, (dIdx) {
+                    final date = startDate.add(Duration(days: wIdx * 7 + dIdx));
+                    if (date.isAfter(today)) {
+                      return const SizedBox(width: 14, height: 14);
+                    }
+
+                    final count = workoutDates[date] ?? 0;
+                    final color = count == 0
+                        ? AppColors.bgCardHover
+                        : count == 1
+                            ? AppColors.brandPrimary.withValues(alpha: 0.4)
+                            : count == 2
+                                ? AppColors.brandPrimary.withValues(alpha: 0.7)
+                                : AppColors.brandPrimary;
+
+                    return Container(
+                      width: 10,
+                      height: 10,
+                      margin: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                        color: color,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    );
+                  }),
+                );
+              }),
+            ),
+          ),
         ],
       ),
     );
@@ -480,34 +555,84 @@ class _HistoryScreenState extends State<HistoryScreen>
   }
 
   Widget _buildMuscleDistribution(Map<String, int> distribution) {
-    final sorted = distribution.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final total = sorted.fold<int>(0, (sum, e) => sum + e.value);
+    if (distribution.isEmpty) return const SizedBox.shrink();
+
+    final List<PieChartSectionData> sections = [];
+    final total = distribution.values.fold<int>(0, (sum, v) => sum + v);
+
+    int i = 0;
+    distribution.forEach((muscle, count) {
+      final percentage = (count / total * 100).round();
+      if (percentage < 3) return; // Skip very small sections
+
+      final colors = [
+        AppColors.brandPrimary,
+        const Color(0xFFF97316),
+        const Color(0xFF3B82F6),
+        const Color(0xFFEAB308),
+        const Color(0xFFA855F7),
+        const Color(0xFF10B981),
+      ];
+
+      sections.add(
+        PieChartSectionData(
+          value: count.toDouble(),
+          title: '$percentage%',
+          radius: 60,
+          titleStyle: AppTypography.labelSmall.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 10,
+          ),
+          color: colors[i % colors.length],
+          badgeWidget: Text(
+            muscle,
+            style: const TextStyle(fontSize: 8, color: Colors.white70),
+          ),
+          badgePositionPercentageOffset: 1.4,
+        ),
+      );
+      i++;
+    });
+
     return GymCard(
       child: Column(
-        children: sorted.take(5).map((entry) {
-          final percentage =
-              total > 0 ? (entry.value / total * 100).round() : 0;
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(entry.key, style: AppTypography.bodyMedium),
-                    Text('$percentage%', style: AppTypography.labelSmall),
-                  ],
-                ),
-                Spacing.vXs,
-                GymProgressBar(
-                    value: percentage / 100,
-                    progressGradient: AppColors.gradientPrimary),
-              ],
+        children: [
+          SizedBox(
+            height: 200,
+            child: PieChart(
+              PieChartData(
+                sections: sections,
+                sectionsSpace: 2,
+                centerSpaceRadius: 30,
+              ),
             ),
-          );
-        }).toList(),
+          ),
+          Spacing.vMd,
+          // Simple legend
+          Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: distribution.entries.take(5).map((e) {
+              return Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: AppColors
+                          .brandPrimary, // Simple mock color for legend
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  Spacing.hXs,
+                  Text(e.key, style: AppTypography.caption),
+                ],
+              );
+            }).toList(),
+          ),
+        ],
       ),
     );
   }
@@ -746,7 +871,7 @@ class _WorkoutDetailSheet extends StatelessWidget {
                   ],
                 ),
               ),
-              NeonButton.icon(icon: LucideIcons.share2, onPress: () {}),
+              NeonButton.icon(icon: LucideIcons.share2, onPress: _shareWorkout),
             ],
           ),
           Spacing.vLg,
@@ -781,9 +906,26 @@ class _WorkoutDetailSheet extends StatelessWidget {
             width: double.infinity,
             icon: LucideIcons.repeat,
             onPress: () {
+              context.read<WorkoutProvider>().startWorkoutFromHistory(workout);
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Repeat workout coming soon!')));
+                const SnackBar(content: Text('Workout started from history!')),
+              );
+            },
+          ),
+          Spacing.vMd,
+          NeonButton(
+            title: 'Save as Template',
+            variant: 'secondary',
+            width: double.infinity,
+            icon: LucideIcons.plus,
+            onPress: () {
+              context
+                  .read<WorkoutProvider>()
+                  .saveHistoryAsTemplate(workout, workout.name);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Saved to templates!')),
+              );
             },
           ),
         ],
@@ -808,25 +950,41 @@ class _WorkoutDetailSheet extends StatelessWidget {
 
   Widget _buildExerciseItem(String exercise, int index) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           Container(
             width: 28,
             height: 28,
             decoration: const BoxDecoration(
-                color: AppColors.bgCardHover,
-                borderRadius: AppRadius.roundedXs),
+              color: AppColors.bgCardHover,
+              borderRadius: AppRadius.roundedSm,
+            ),
             child: Center(
-                child: Text('${index + 1}', style: AppTypography.labelMedium)),
+              child: Text('${index + 1}', style: AppTypography.labelSmall),
+            ),
           ),
           Spacing.hMd,
-          Expanded(child: Text(exercise, style: AppTypography.bodyMedium)),
+          Expanded(
+            child: Text(exercise, style: AppTypography.bodyMedium),
+          ),
           const Icon(LucideIcons.chevronRight,
               size: 16, color: AppColors.textMuted),
         ],
       ),
     );
+  }
+
+  void _shareWorkout() {
+    final exercisesTxt = workout.exercises.join(', ');
+    final shareTxt = 'Just finished a workout! 💪\n\n'
+        'Workout: ${workout.name}\n'
+        'Duration: ${workout.duration} min\n'
+        'Volume: ${(workout.totalVolume / 1000).toStringAsFixed(1)}k kg\n'
+        'Exercises: $exercisesTxt\n\n'
+        'Tracked with Gym Tracker Pro';
+
+    Share.share(shareTxt);
   }
 
   String _formatDate(DateTime date) {

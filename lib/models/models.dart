@@ -1,9 +1,12 @@
+import 'package:flutter/material.dart';
+
 class WorkoutSet {
   final String id;
   final SetType type;
   final String kg;
   final String reps;
   final String? rpe;
+  final String? note;
   final bool completed;
 
   WorkoutSet({
@@ -12,6 +15,7 @@ class WorkoutSet {
     required this.kg,
     required this.reps,
     this.rpe,
+    this.note,
     this.completed = false,
   });
 
@@ -21,6 +25,7 @@ class WorkoutSet {
     String? kg,
     String? reps,
     String? rpe,
+    String? note,
     bool? completed,
   }) {
     return WorkoutSet(
@@ -29,6 +34,7 @@ class WorkoutSet {
       kg: kg ?? this.kg,
       reps: reps ?? this.reps,
       rpe: rpe ?? this.rpe,
+      note: note ?? this.note,
       completed: completed ?? this.completed,
     );
   }
@@ -39,6 +45,7 @@ class WorkoutSet {
         'kg': kg,
         'reps': reps,
         'rpe': rpe,
+        'note': note,
         'completed': completed,
       };
 
@@ -48,6 +55,7 @@ class WorkoutSet {
         kg: json['kg'],
         reps: json['reps'],
         rpe: json['rpe'],
+        note: json['note'],
         completed: json['completed'] ?? false,
       );
 }
@@ -148,6 +156,8 @@ class WorkoutHistory {
   final List<String> exercises;
   final List<String> muscleGroups;
   final int prCount;
+  final List<ActiveExercise>?
+      details; // V1.3 Upgrade: Full details for repeat functionality
 
   WorkoutHistory({
     required this.id,
@@ -158,6 +168,7 @@ class WorkoutHistory {
     required this.exercises,
     required this.muscleGroups,
     this.prCount = 0,
+    this.details,
   });
 
   Map<String, dynamic> toJson() => {
@@ -169,6 +180,7 @@ class WorkoutHistory {
         'exercises': exercises,
         'muscleGroups': muscleGroups,
         'prCount': prCount,
+        'details': details?.map((e) => e.toJson()).toList(),
       };
 
   factory WorkoutHistory.fromJson(Map<String, dynamic> json) => WorkoutHistory(
@@ -180,7 +192,104 @@ class WorkoutHistory {
         exercises: List<String>.from(json['exercises']),
         muscleGroups: List<String>.from(json['muscleGroups']),
         prCount: json['prCount'] ?? 0,
+        details: json['details'] != null
+            ? (json['details'] as List)
+                .map((e) => ActiveExercise.fromJson(e))
+                .toList()
+            : null,
       );
 }
 
 enum SetType { warmup, normal, failure }
+
+class WorkoutTemplate {
+  final String id;
+  final String name;
+  final String? description;
+  final List<ActiveExercise> exercises;
+  final DateTime lastUsed;
+
+  WorkoutTemplate({
+    required this.id,
+    required this.name,
+    this.description,
+    required this.exercises,
+    required this.lastUsed,
+  });
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'description': description,
+        'exercises': exercises.map((e) => e.toJson()).toList(),
+        'lastUsed': lastUsed.toIso8601String(),
+      };
+
+  factory WorkoutTemplate.fromJson(Map<String, dynamic> json) =>
+      WorkoutTemplate(
+        id: json['id'],
+        name: json['name'],
+        description: json['description'],
+        exercises: (json['exercises'] as List)
+            .map((e) => ActiveExercise.fromJson(e))
+            .toList(),
+        lastUsed: DateTime.parse(json['lastUsed']),
+      );
+
+  WorkoutTemplate copyWith({
+    String? id,
+    String? name,
+    String? description,
+    List<ActiveExercise>? exercises,
+    DateTime? lastUsed,
+  }) {
+    return WorkoutTemplate(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      exercises: exercises ?? this.exercises,
+      lastUsed: lastUsed ?? this.lastUsed,
+    );
+  }
+}
+
+class Achievement {
+  final String id;
+  final String title;
+  final String description;
+  final IconData icon;
+  final Color color;
+  final DateTime? unlockedAt;
+
+  Achievement({
+    required this.id,
+    required this.title,
+    required this.description,
+    required this.icon,
+    required this.color,
+    this.unlockedAt,
+  });
+
+  bool get isUnlocked => unlockedAt != null;
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'description': description,
+        'icon': icon.codePoint,
+        'color': color.toARGB32(),
+        'unlockedAt': unlockedAt?.toIso8601String(),
+      };
+
+  factory Achievement.fromJson(Map<String, dynamic> json) => Achievement(
+        id: json['id'],
+        title: json['title'],
+        description: json['description'],
+        icon: IconData(json['icon'],
+            fontFamily: 'LucideIcons', fontPackage: 'lucide_icons_flutter'),
+        color: Color(json['color']),
+        unlockedAt: json['unlockedAt'] != null
+            ? DateTime.parse(json['unlockedAt'])
+            : null,
+      );
+}

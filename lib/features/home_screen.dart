@@ -9,6 +9,7 @@ import '../core/settings_provider.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/models.dart';
+import 'templates_screen.dart';
 
 // =============================================================================
 // PHASE 3: HOME SCREEN ENHANCEMENTS
@@ -28,26 +29,35 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-
-    // 9.2 Data Resilience - Error Listener
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<WorkoutProvider>();
-      provider.addListener(() {
-        if (provider.errorMessage != null && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(provider.errorMessage!),
-              backgroundColor: AppColors.error,
-              action: SnackBarAction(
-                label: 'Dismiss',
-                textColor: Colors.white,
-                onPressed: provider.clearError,
-              ),
-            ),
-          );
-        }
-      });
+      context.read<WorkoutProvider>().addListener(_errorListener);
     });
+  }
+
+  @override
+  void dispose() {
+    // Phase 2.11: Fix memory leak
+    if (mounted) {
+      context.read<WorkoutProvider>().removeListener(_errorListener);
+    }
+    super.dispose();
+  }
+
+  void _errorListener() {
+    final provider = context.read<WorkoutProvider>();
+    if (provider.errorMessage != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.errorMessage!),
+          backgroundColor: AppColors.error,
+          action: SnackBarAction(
+            label: 'Dismiss',
+            textColor: Colors.white,
+            onPressed: provider.clearError,
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -86,10 +96,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               Row(
                 children: [
                   GestureDetector(
-                    onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Profile settings coming soon!')),
-                    ),
+                    onTap: () {
+                      // Navigate to Profile Tab (index 3)
+                      // This assumes HomeScreen is hosted in a MainScaffold that provides navigation
+                      // For now, if we can't easily switch tabs from here without a global controller,
+                      // we can just open the edit sheet if we are in ProfileScreen,
+                      // but here in HomeScreen it's better to navigate.
+                      // Actually, the easiest way to switch tabs in this specific architecture
+                      // (if using a stateful MainScaffold) is to use a provider or a global key.
+                      // Since I don't see one yet, I'll check how tabs are switched.
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('Navigate to Profile tab below!')),
+                      );
+                    },
                     child: GymAvatar(
                       name: settings.userName,
                       size: 44,
@@ -269,6 +289,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
           // Last Session Card with animated stats
           _buildLastSessionCard(context, itemWidth),
+
+          // Weekly Goal Card (Phase 2.7)
+          _buildWeeklyGoalCard(itemWidth),
         ],
       ),
     );
@@ -377,9 +400,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               label: 'Repeat Last Session',
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Coming soon!')),
-                );
+                final provider =
+                    Provider.of<WorkoutProvider>(context, listen: false);
+                if (provider.history.isNotEmpty) {
+                  provider.startWorkoutFromHistory(provider.history.first);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('No previous session found!')),
+                  );
+                }
               },
             ),
             _buildQuickActionItem(
@@ -387,8 +416,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               label: 'From Template',
               onTap: () {
                 Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Templates coming soon!')),
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const TemplatesScreen(),
+                  ),
                 );
               },
             ),
@@ -459,6 +491,87 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildWeeklyGoalCard(double width) {
+    return Consumer2<WorkoutProvider, SettingsProvider>(
+      builder: (context, workout, settings, child) {
+        final count = workout.weeklyWorkoutCount;
+        final goal = settings.weeklyGoal;
+        final progress = (count / goal).clamp(0.0, 1.0);
+
+        return GymCard(
+          width: width,
+          onTap: () {
+            // Future: Show goal settings
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Goal settings coming soon!')),
+            );
+          },
+          child: SizedBox(
+            height: 160,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'WEEKLY GOAL',
+                      style: AppTypography.overline
+                          .copyWith(color: AppColors.textSecondary),
+                    ),
+                    Icon(
+                      LucideIcons.target,
+                      size: 14,
+                      color: progress >= 1.0
+                          ? AppColors.brandPrimary
+                          : AppColors.textMuted,
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      SizedBox(
+                        width: 70,
+                        height: 70,
+                        child: CircularProgressIndicator(
+                          value: progress,
+                          strokeWidth: 6,
+                          backgroundColor: AppColors.bgCardHover,
+                          color: AppColors.brandPrimary,
+                        ),
+                      ),
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('$count', style: AppTypography.headlineSmall),
+                          Text('/$goal',
+                              style: AppTypography.caption
+                                  .copyWith(color: AppColors.textMuted)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  progress >= 1.0 ? 'Goal Reached! 🎉' : '${goal - count} left',
+                  style: AppTypography.caption.copyWith(
+                    color: progress >= 1.0
+                        ? AppColors.brandPrimary
+                        : AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

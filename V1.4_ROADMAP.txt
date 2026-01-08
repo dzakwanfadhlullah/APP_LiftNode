@@ -1,0 +1,594 @@
+# LiftNode V1.4 Roadmap: Premium Apple-ish UI/UX Redesign
+# ==============================================================================
+# Tujuan: Transformasi total tampilan aplikasi menjadi premium, modern,
+#         dan estetis seperti produk Apple dengan fokus pada depth,
+#         glassmorphism, micro-animations, dan visual hierarchy.
+# ==============================================================================
+
+Tanggal: 8 Januari 2026
+Versi Target: 1.4.0
+Fokus: UI/UX Premium Redesign
+
+---
+
+# 📌 ANALISIS MASALAH SAAT INI
+
+Berdasarkan screenshot dan review kode, berikut masalah utama:
+
+1. **Terlalu Flat & Monoton** - Tidak ada depth, semua kartu terlihat sama
+2. **Warna Kurang Hidup** - Gradien terlalu subtle, tidak ada accent yang menarik
+3. **Button Kurang Premium** - NeonButton terlalu basic, tidak ada glow yang memukau
+4. **Empty States Membosankan** - Hanya icon + text, tidak ada ilustrasi atau animasi
+5. **Progress Bar Onboarding Basic** - Terlalu flat, tidak ada animasi pulse
+6. **Cards Tidak Punya Identity** - Semua GymCard bentuknya sama, tidak ada variasi
+7. **Typography Kurang Contrast** - Hierarchy visual tidak jelas
+8. **Tidak Ada Micro-Animations** - Transisi terasa kaku dan static
+9. **Input Fields Biasa** - Tidak ada focus animation yang premium
+10. **Bottom Navigation Basic** - Tidak ada glow/highlight yang menarik
+
+---
+
+═══════════════════════════════════════════════════════════════════════════════
+                              PHASE 1: FOUNDATION
+                      Glassmorphism & Enhanced Design Tokens
+═══════════════════════════════════════════════════════════════════════════════
+
+## Phase 1.1: Glassmorphism Design System
+**Effort:** Medium | **Priority:** Critical | **File:** app_theme.dart
+
+### Objektif:
+Implementasi token-token glassmorphism untuk menciptakan efek kedalaman (depth)
+yang khas Apple dengan background blur, border glow, dan multi-layer shadows.
+
+### Perubahan:
+1. **Glass Container Tokens**
+   - `glassBackground`: Color dengan opacity 0.05-0.15 untuk efek frosted
+   - `glassBorder`: Border dengan opacity rendah dan gradient
+   - `glassBlur`: BackdropFilter dengan sigma 10-25
+
+2. **Depth/Elevation System**
+   - Level 0: Surface (bgCard) - No elevation
+   - Level 1: Raised (+8dp shadow + subtle border glow)
+   - Level 2: Floating (+16dp shadow + stronger glow)
+   - Level 3: Modal (+24dp shadow + ambient light)
+
+3. **Enhanced Shadow System**
+   - Inner shadows untuk efek "pressed" state
+   - Ambient shadows dengan warna accent
+   - Multi-layer shadows (2-3 layers per component)
+
+4. **New Gradient Palette**
+   ```dart
+   // Premium Glass Gradients
+   static const glassGradientPrimary = LinearGradient(
+     begin: Alignment.topLeft,
+     end: Alignment.bottomRight,
+     colors: [
+       Color(0x1AB6F09C),  // brandPrimary 10%
+       Color(0x0AB6F09C),  // brandPrimary 4%
+     ],
+   );
+   
+   // Mesh/Aurora Gradients untuk backgrounds
+   static const auroraGradient = LinearGradient(...);
+   ```
+
+### Deliverables:
+- [x] Class `GlassDecoration` dengan parameter customizable ✅
+- [x] Class `DepthTokens` untuk consistent elevation ✅
+- [x] Method `AppShadows.ambient(Color accentColor)` ✅
+- [x] Method `AppShadows.inner()` ✅
+- [x] 5 preset gradient definitions ✅
+- [x] Class `GlassBlur` untuk BackdropFilter presets ✅ (BONUS)
+- [x] Method `AppShadows.elevated(level)` untuk multi-layer shadows ✅ (BONUS)
+
+---
+
+## Phase 1.2: Premium Typography & Visual Hierarchy
+**Effort:** Low-Medium | **Priority:** High | **File:** app_theme.dart
+
+### Objektif:
+Memperkuat hierarchy visual dengan typography yang lebih expressive dan
+spacing yang lebih generous ala Apple Human Interface Guidelines.
+
+### Perubahan:
+1. **Enhanced Typography Scale**
+   - `heroTitle`: 40px, -1.5 tracking, weight 800 (untuk splash/onboarding)
+   - `statHighlight`: 48px, -2.0 tracking (untuk angka besar)
+   - Semua headline dikurangi letter-spacing untuk feel lebih modern
+
+2. **Dynamic Type Support**
+   - Method `scaledFontSize(base)` untuk accessibility
+   - Support larger text accessibility option
+
+3. **Text Gradients Helper**
+   - `GradientText` widget untuk judul premium
+   - Shimmer text effect untuk loading states
+
+4. **Improved Spacing**
+   - Increase `cardPadding` dari 16 ke 20
+   - Increase `sectionGap` dari 24 ke 32
+   - New `comfortPadding: 24` untuk breathing room
+
+### Deliverables:
+- [ ] Extended `AppTypography` dengan 5+ style baru
+- [ ] `GradientText` StatelessWidget
+- [ ] `ShimmerText` StatefulWidget
+- [ ] Updated `Spacing` constants
+- [ ] `TextContrast` helper untuk light/dark combinations
+
+---
+
+═══════════════════════════════════════════════════════════════════════════════
+                              PHASE 2: COMPONENTS
+                     Premium Widget Library Transformation
+═══════════════════════════════════════════════════════════════════════════════
+
+## Phase 2.1: GlassCard - Premium Card Component
+**Effort:** High | **Priority:** Critical | **File:** gym_card.dart → glass_card.dart
+
+### Objektif:
+Menggantikan GymCard yang flat dengan GlassCard yang memiliki depth,
+blur effect, dan glow borders seperti card di iOS Control Center.
+
+### Implementasi:
+```dart
+class GlassCard extends StatefulWidget {
+  final Widget child;
+  final GlassVariant variant; // frosted, solid, gradient, outlined
+  final double blurAmount;    // 0-30
+  final Color? accentColor;   // untuk border glow
+  final bool enablePressEffect;
+  final bool enableHoverGlow;
+  // ... existing properties
+}
+```
+
+### Visual Features:
+1. **Frosted Glass Effect**
+   - `BackdropFilter` dengan blur sigma 15-25
+   - Background dengan 5-10% opacity
+   - Subtle noise texture overlay
+
+2. **Premium Borders**
+   - Top border lebih terang (light source dari atas)
+   - Bottom border lebih gelap (3D illusion)
+   - Corner radius yang lebih besar (20-24px)
+
+3. **Interactive States**
+   - Hover: Border glow dengan accent color
+   - Pressed: Scale 0.97 + inner shadow
+   - Loading: Shimmer gradient sweep
+
+4. **Variants**
+   - `GlassVariant.frosted` - Full blur effect
+   - `GlassVariant.solid` - Opaque dengan gradient
+   - `GlassVariant.gradient` - Gradient overlay
+   - `GlassVariant.outlined` - Border only, transparent bg
+
+### Deliverables:
+- [ ] `GlassCard` widget dengan 4 variants
+- [ ] `GlassCardTheme` for consistent styling
+- [ ] Migration dari semua `GymCard` usage
+- [ ] Shimmer loading state
+- [ ] Border gradient animation on focus
+
+---
+
+## Phase 2.2: PremiumButton - Next-Gen Button System
+**Effort:** High | **Priority:** Critical | **File:** neon_button.dart → premium_button.dart
+
+### Objektif:
+Upgrade NeonButton menjadi PremiumButton dengan efek 3D depth,
+animated glow, dan micro-interactions yang satisfying.
+
+### Implementasi:
+```dart
+class PremiumButton extends StatefulWidget {
+  final String? title;
+  final IconData? icon;
+  final PremiumButtonStyle style; // filled, tinted, bordered, glass
+  final PremiumButtonSize size;   // compact, regular, large, hero
+  final Color? accentColor;
+  final bool enablePulse;         // untuk CTA buttons
+  final bool enableShimmer;       // loading shimmer effect
+}
+```
+
+### Visual Features:
+1. **3D Depth Effect**
+   - Layered shadows (2-3 layers)
+   - Bottom "ledge" untuk 3D feel
+   - Pressed state: shadows collapse, button "sinks"
+
+2. **Glow System**
+   - Static ambient glow (always on)
+   - Pulse animation untuk CTA buttons
+   - Hover: glow intensity meningkat
+
+3. **Premium Shimmer**
+   - Diagonal sweep shine effect
+   - Trigger on idle state setiap 3 detik
+
+4. **Icon Animations**
+   - Icon rotate/bounce on press
+   - Arrow icon slides right on hover
+
+### Styles:
+- `filled` - Solid color dengan 3D depth
+- `tinted` - Transparent bg dengan accent tint
+- `bordered` - Outline with glow
+- `glass` - Frosted glass button
+
+### Deliverables:
+- [ ] `PremiumButton` dengan 4 styles x 4 sizes
+- [ ] `PulseAnimation` mixin
+- [ ] `ShimmerAnimation` overlay
+- [ ] Icon animation controllers
+- [ ] Migration dari semua `NeonButton`
+
+---
+
+═══════════════════════════════════════════════════════════════════════════════
+                              PHASE 3: SCREENS
+                    Screen-by-Screen Premium Makeover
+═══════════════════════════════════════════════════════════════════════════════
+
+## Phase 3.1: Onboarding Screen - First Impression Excellence
+**Effort:** High | **Priority:** Critical | **File:** onboarding_screen.dart
+
+### Objektif:
+Transformasi onboarding dari tampilan yang membosankan menjadi
+pengalaman yang memukau dengan animasi, ilustrasi, dan feel premium.
+
+### Visual Overhaul:
+1. **Animated Background**
+   - Subtle gradient animation (aurora effect)
+   - Floating particles/orbs di background
+   - Responsive ke page navigation
+
+2. **Progress Indicator Redesign**
+   - Capsule pills dengan glow on active
+   - Smooth animated width transition
+   - Pulse effect pada step aktif
+
+3. **Welcome Step Improvements**
+   - Hero icon dengan animated glow ring
+   - Text reveal animation (fade up stagger)
+   - Illustration atau Lottie animation
+
+4. **Goal Selection Redesign**
+   - Number badges dengan 3D depth
+   - Selected state: lift up + glow + checkmark
+   - Ripple animation on selection
+
+5. **Unit Selector Redesign**
+   - Segmented control dengan sliding indicator
+   - Glass style dengan active state glow
+   - Smooth spring animation saat switch
+
+6. **CTA Button Enhancement**
+   - Hero-size button dengan pulse glow
+   - Arrow icon dengan hover animation
+   - Success konfirmasi animation
+
+### Deliverables:
+- [ ] `AnimatedAuroraBackground` widget
+- [ ] `PremiumProgressIndicator` widget
+- [ ] `SelectableNumberBadge` widget
+- [ ] `AnimatedSegmentedControl` widget
+- [ ] Page transition animations (slide + fade)
+- [ ] Welcome animation sequence
+
+---
+
+## Phase 3.2: Home Dashboard - Premium Bento Grid
+**Effort:** Very High | **Priority:** Critical | **File:** home_screen.dart
+
+### Objektif:
+Mengubah dashboard dari grid cards yang monoton menjadi
+Bento-style layout yang dynamic dengan berbagai ukuran dan styles.
+
+### Visual Overhaul:
+1. **Header Section**
+   - Avatar dengan animated gradient ring
+   - Greeting dengan dynamic background tint
+   - Streak badge dengan fire animation (Lottie atau custom)
+
+2. **Hero Workout Card**
+   - Full-width dengan gradient mesh background
+   - Floating dumbbell icon dengan subtle rotation
+   - Pulsing glow ring around plus button
+   - Particles/confetti ready for celebration
+
+3. **Stats Cards Grid**
+   - Varying heights untuk visual interest
+   - Each card dengan unique accent color
+   - Mini chart dengan gradient fill
+   - Animated counters (CountUp animation)
+
+4. **Volume Chart Card**
+   - Premium gradient area chart
+   - Animated drawing on appear
+   - Interactive touch untuk values
+   - Glow effect pada datapoints
+
+5. **Weekly Goal Card**
+   - Circular progress dengan gradient stroke
+   - Animated percentage counter
+   - Celebration animation at 100%
+   - Trophy/star icon dengan glow
+
+6. **Recent History Section**
+   - Horizontal scrolling dengan peek effect
+   - Cards dengan workout-type colored accents
+   - PR badge dengan shimmer animation
+   - Time ago dengan relative formatting
+
+### Deliverables:
+- [ ] `GradientAvatarRing` widget
+- [ ] `AnimatedFireBadge` widget
+- [ ] `PremiumBentoGrid` layout system
+- [ ] `AnimatedCounter` widget
+- [ ] `GradientAreaChart` wrapper
+- [ ] `CelebrationOverlay` untuk achievements
+- [ ] `HorizontalHistoryScroller` widget
+
+---
+
+═══════════════════════════════════════════════════════════════════════════════
+                              PHASE 4: POLISH
+                    Micro-Animations & Interaction Details
+═══════════════════════════════════════════════════════════════════════════════
+
+## Phase 4.1: Micro-Animations Library
+**Effort:** Medium-High | **Priority:** High | **File:** core/animations/
+
+### Objektif:
+Membuat library animasi yang reusable untuk memberikan
+feel "alive" dan responsive di setiap interaksi.
+
+### Animation Types:
+1. **Entry Animations**
+   - `FadeSlideIn` - fade + slide dari direction
+   - `ScaleIn` - scale dari 0.8 dengan bounce
+   - `StaggeredListAnimation` - delayed reveal per item
+
+2. **Interaction Animations**
+   - `BounceOnTap` - scale bounce feedback
+   - `RippleGlow` - spreading glow on press
+   - `WiggleOnError` - shake animation
+
+3. **Transition Animations**
+   - `SharedAxisTransition` - page transitions
+   - `FadeThroughTransition` - tab switches
+   - `ContainerTransform` - hero animation
+
+4. **Ambient Animations**
+   - `PulseGlow` - breathing glow effect
+   - `ShimmerSweep` - diagonal light sweep
+   - `FloatingMotion` - subtle up/down bob
+
+5. **Celebration Animations**
+   - `ConfettiExplosion` - for achievements
+   - `StarBurst` - for PRs
+   - `CheckmarkDraw` - animated checkmark
+
+### Implementation:
+```dart
+// Easy to use wrapper
+FadeSlideIn(
+  delay: Duration(milliseconds: 100),
+  direction: SlideDirection.up,
+  child: GlassCard(...),
+)
+
+// Or as mixin for custom widgets
+class MyWidget extends StatefulWidget with BounceOnTapMixin {
+  // ...
+}
+```
+
+### Deliverables:
+- [ ] `core/animations/` directory structure
+- [ ] 5 entry animation widgets
+- [ ] 3 interaction animation mixins
+- [ ] 3 page transition builders
+- [ ] 3 ambient animation widgets
+- [ ] 3 celebration overlays
+- [ ] `AnimationController` utilities
+
+---
+
+## Phase 4.2: Input & Form Premium Styling
+**Effort:** Medium | **Priority:** Medium-High | **File:** gym_form_widgets.dart
+
+### Objektif:
+Upgrade semua form inputs menjadi premium dengan
+focus animations, validation feedback, dan better UX.
+
+### Visual Overhaul:
+1. **Text Input Redesign**
+   - Floating label dengan smooth animation
+   - Focus: border glow + subtle scale up
+   - Filled variant dengan glass background
+   - Error state: shake + red glow
+
+2. **Number Input (kg/reps)**
+   - Stepper buttons dengan haptic feedback
+   - Quick increment dengan long press
+   - Value counter animation
+   - Unit label dengan secondary styling
+
+3. **Search Input**
+   - Glass style dengan blur background
+   - Animated search icon
+   - Clear button dengan fade animation
+   - Loading spinner dalam input
+
+4. **Dropdown/Picker**
+   - Bottom sheet dengan premium header
+   - Search filter dengan live results
+   - Selected item dengan checkmark animation
+   - Grouped items dengan section headers
+
+5. **Toggle/Switch**
+   - Custom track dengan gradient
+   - Thumb dengan shadow dan glow
+   - Spring animation on toggle
+   - Optional icon dalam thumb
+
+### Deliverables:
+- [ ] `GlassTextField` widget
+- [ ] `PremiumNumberInput` widget
+- [ ] `GlassSearchBar` widget
+- [ ] `PremiumBottomPicker` widget
+- [ ] `GlassSwitch` widget
+- [ ] Focus/error/success state animations
+
+---
+
+═══════════════════════════════════════════════════════════════════════════════
+                              PHASE 5: FINISHING
+                    Final Polish & Performance Optimization
+═══════════════════════════════════════════════════════════════════════════════
+
+## Phase 5.1: Bottom Navigation & App Shell
+**Effort:** Medium | **Priority:** High | **File:** main.dart, navigation widgets
+
+### Objektif:
+Redesign bottom navigation bar dan app shell untuk
+memberikan feel premium di setiap navigasi.
+
+### Visual Overhaul:
+1. **Bottom Navigation Bar**
+   - Glass background dengan blur
+   - Floating style (margin dari edge)
+   - Active item dengan glow + scale
+   - Animated indicator dengan spring physics
+
+2. **FAB (Floating Action Button)**
+   - Larger dengan gradient background
+   - Pulsing glow ring
+   - Press: satisfying squish animation
+   - Long press: reveal quick actions menu
+
+3. **Tab Transitions**
+   - Fade through untuk content switch
+   - Navbar items dengan coordinated animation
+   - Preserving scroll position per tab
+
+4. **Status Bar & Safe Area**
+   - Adaptive color berdasarkan content
+   - Consistent padding di semua screens
+
+### Deliverables:
+- [ ] `GlassBottomNavBar` widget
+- [ ] `AnimatedNavItem` widget
+- [ ] `PremiumFAB` widget
+- [ ] `QuickActionsMenu` expandable
+- [ ] Tab transition animations
+- [ ] Status bar color management
+
+---
+
+## Phase 5.2: Performance & Accessibility
+**Effort:** Medium | **Priority:** High | **File:** Various
+
+### Objektif:
+Memastikan semua peningkatan visual tidak mengorbankan
+performance dan tetap accessible untuk semua pengguna.
+
+### Optimizations:
+1. **Animation Performance**
+   - Use `RepaintBoundary` untuk heavy animations
+   - `AnimatedBuilder` vs `setState` optimization
+   - Reduce backdrop blur on low-end devices
+   - Frame budget monitoring
+
+2. **Memory Management**
+   - Dispose all animation controllers
+   - Image caching strategy
+   - Lazy loading untuk off-screen content
+
+3. **Reduced Motion Support**
+   - Respect `MediaQuery.disableAnimations`
+   - Fallback ke instant transitions
+   - Keep essential feedback only
+
+4. **Accessibility Enhancements**
+   - Semantic labels untuk screen readers
+   - Minimum touch target sizes (48x48)
+   - Color contrast compliance
+   - Focus indicators untuk keyboard nav
+
+5. **Testing & QA**
+   - Visual regression tests
+   - Animation smoothness tests
+   - Memory leak detection
+   - Cross-platform testing (iOS/Android/Web)
+
+### Deliverables:
+- [ ] Performance monitoring dashboard
+- [ ] `ReducedMotion` wrapper widget
+- [ ] Accessibility audit & fixes
+- [ ] Documentation untuk design system
+- [ ] Storybook-style widget catalog
+
+---
+
+═══════════════════════════════════════════════════════════════════════════════
+                            IMPLEMENTATION ORDER
+═══════════════════════════════════════════════════════════════════════════════
+
+## Recommended Sequence:
+
+### Sprint 1 (Week 1-2): Foundation
+1. Phase 1.1 - Glassmorphism tokens
+2. Phase 1.2 - Typography updates
+3. Phase 2.1 - GlassCard component
+
+### Sprint 2 (Week 3-4): Core Components
+4. Phase 2.2 - PremiumButton
+5. Phase 4.2 - Form inputs
+6. Phase 5.1 - Bottom navigation
+
+### Sprint 3 (Week 5-6): Screens
+7. Phase 3.1 - Onboarding redesign
+8. Phase 3.2 - Home dashboard
+
+### Sprint 4 (Week 7-8): Polish
+9. Phase 4.1 - Micro-animations
+10. Phase 5.2 - Performance & A11y
+
+---
+
+═══════════════════════════════════════════════════════════════════════════════
+                               DESIGN REFERENCES
+═══════════════════════════════════════════════════════════════════════════════
+
+## Inspirasi Visual:
+- Apple iOS 17 Control Center
+- Apple Music Now Playing card
+- Apple Fitness+ dashboard
+- Arc Browser sidebar
+- Linear App interface
+- Raycast UI components
+- Notion calendar cards
+
+## Color Philosophy:
+- Dark mode sebagai default
+- Accent colors untuk emphasis, bukan decorasi
+- Gradients yang subtle, bukan overwhelming
+- White/light elements untuk focal points
+
+## Animation Philosophy:
+- Purposeful, bukan decorative
+- Fast feedback (< 300ms)
+- Spring physics untuk organic feel
+- Anticipation dan follow-through
+
+---
+
+*Last updated: 8 Januari 2026*
+*Author: AI Assistant untuk UI/UX Premium Redesign*

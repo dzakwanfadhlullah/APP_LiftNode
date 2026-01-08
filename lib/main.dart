@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:provider/provider.dart';
+
 import 'core/app_theme.dart';
-import 'core/workout_provider.dart';
 import 'core/settings_provider.dart';
 import 'core/shared_widgets.dart';
-import 'features/home_screen.dart';
-import 'features/history_screen.dart';
-import 'features/workout_logger_screen.dart';
-import 'features/profile_screen.dart';
+import 'core/widgets/achievement_overlay.dart';
+import 'core/workout_provider.dart';
 import 'features/exercise_library_screen.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'features/history_screen.dart';
+import 'features/home_screen.dart';
+import 'features/onboarding_screen.dart';
+import 'features/profile_screen.dart';
+import 'features/workout_logger_screen.dart';
 
-void main() {
+import 'core/notification_service.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.init();
   runApp(
     MultiProvider(
       providers: [
@@ -47,20 +54,50 @@ class GymTrackerApp extends StatelessWidget {
           ),
         );
       },
-      home: const MainScaffold(),
+      home: Consumer<SettingsProvider>(
+        builder: (context, settings, _) {
+          if (settings.isFirstRun) {
+            return const OnboardingScreen();
+          }
+          return const MainScaffold();
+        },
+      ),
+      onGenerateRoute: (settings) {
+        // Deep linking support (Phase 2.14)
+        if (settings.name == '/history') {
+          return MaterialPageRoute(
+              builder: (_) => const MainScaffold(initialIndex: 1));
+        }
+        if (settings.name == '/library') {
+          return MaterialPageRoute(
+              builder: (_) => const MainScaffold(initialIndex: 2));
+        }
+        if (settings.name == '/profile') {
+          return MaterialPageRoute(
+              builder: (_) => const MainScaffold(initialIndex: 3));
+        }
+        return MaterialPageRoute(builder: (_) => const MainScaffold());
+      },
     );
   }
 }
 
 class MainScaffold extends StatefulWidget {
-  const MainScaffold({super.key});
+  final int initialIndex;
+  const MainScaffold({super.key, this.initialIndex = 0});
 
   @override
   State<MainScaffold> createState() => _MainScaffoldState();
 }
 
 class _MainScaffoldState extends State<MainScaffold> {
-  int _currentIndex = 0;
+  late int _currentIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentIndex = widget.initialIndex;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +127,25 @@ class _MainScaffoldState extends State<MainScaffold> {
                   left: 0,
                   right: 0,
                   child: _buildCustomTabBar(),
+                ),
+                // Achievement Overlay
+                Consumer<WorkoutProvider>(
+                  builder: (context, provider, _) {
+                    if (provider.newlyUnlockedAchievements.isEmpty) {
+                      return const SizedBox.shrink();
+                    }
+                    return Container(
+                      color: Colors.black54,
+                      child: Center(
+                        child: AchievementOverlay(
+                          achievement: provider.newlyUnlockedAchievements.first,
+                          onDismiss: () {
+                            provider.clearNewlyUnlockedAchievements();
+                          },
+                        ),
+                      ),
+                    );
+                  },
                 ),
               ],
             ),

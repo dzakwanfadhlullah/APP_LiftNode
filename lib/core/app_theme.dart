@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -88,6 +89,78 @@ class AppColors {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [Color(0xFF331A1A), Color(0xFF190D0D)],
+  );
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PHASE 1.4 V1.4: GLASS COLORS (Glassmorphism)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // Glass backgrounds dengan berbagai opacity untuk efek frosted
+  static const Color glassBgLight = Color(0x1AFFFFFF); // 10% white
+  static const Color glassBgMedium = Color(0x26FFFFFF); // 15% white
+  static const Color glassBgDark = Color(0x0DFFFFFF); // 5% white
+
+  // Glass borders untuk efek depth
+  static const Color glassBorderLight =
+      Color(0x33FFFFFF); // 20% white (top edge)
+  static const Color glassBorderDark =
+      Color(0x1A000000); // 10% black (bottom edge)
+  static const Color glassBorderSubtle = Color(0x0DFFFFFF); // 5% white
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PHASE 1.4 V1.4: PREMIUM GLASS GRADIENTS
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // Glass gradient dengan brand primary tint
+  static const LinearGradient glassGradientPrimary = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0x1AB6F09C), // brandPrimary 10%
+      Color(0x0AB6F09C), // brandPrimary 4%
+    ],
+  );
+
+  // Glass gradient dengan brand secondary (cyan) tint
+  static const LinearGradient glassGradientSecondary = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0x1A22D3EE), // brandSecondary 10%
+      Color(0x0A22D3EE), // brandSecondary 4%
+    ],
+  );
+
+  // Glass gradient dengan tertiary (purple) tint
+  static const LinearGradient glassGradientTertiary = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0x1AA78BFA), // brandTertiary 10%
+      Color(0x0AA78BFA), // brandTertiary 4%
+    ],
+  );
+
+  // Neutral frosted glass (untuk cards biasa)
+  static const LinearGradient glassGradientNeutral = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0x12FFFFFF), // white 7%
+      Color(0x08FFFFFF), // white 3%
+    ],
+  );
+
+  // Aurora/Mesh gradient untuk backgrounds
+  static const LinearGradient auroraGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF0D1117), // Deep dark
+      Color(0xFF0A1628), // Dark blue tint
+      Color(0xFF0D1117), // Deep dark
+    ],
+    stops: [0.0, 0.5, 1.0],
   );
 }
 
@@ -180,6 +253,32 @@ class AppAnimations {
   static const Curve enterCurve = easeOut;
   static const Curve exitCurve = easeIn;
   static const Curve emphasizedCurve = smooth;
+}
+
+// =============================================================================
+// PHASE 2.12: CUSTOM PAGE ROUTE TRANSITIONS
+// =============================================================================
+
+class SlidePageRoute<T> extends PageRouteBuilder<T> {
+  final Widget page;
+  SlidePageRoute({required this.page})
+      : super(
+          pageBuilder: (context, animation, secondaryAnimation) => page,
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            const curve = AppAnimations.snappy;
+
+            var tween =
+                Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+          transitionDuration: AppAnimations.pageTransition,
+        );
 }
 
 // =============================================================================
@@ -434,6 +533,119 @@ class AppShadows {
       ),
     ];
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PHASE 1.4 V1.4: AMBIENT SHADOWS (dengan warna accent)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Ambient shadow dengan warna accent untuk efek glow pada hover/focus
+  /// [accentColor] - warna yang akan dijadikan ambient glow
+  /// [intensity] - kekuatan glow (0.0 - 1.0, default 0.3)
+  /// [blur] - blur radius (default 20)
+  static List<BoxShadow> ambient(
+    Color accentColor, {
+    double intensity = 0.3,
+    double blur = 20,
+  }) {
+    return [
+      // Layer 1: Soft glow (far)
+      BoxShadow(
+        color: accentColor.withValues(alpha: intensity * 0.4),
+        blurRadius: blur * 1.5,
+        spreadRadius: 0,
+        offset: const Offset(0, 4),
+      ),
+      // Layer 2: Focused glow (near)
+      BoxShadow(
+        color: accentColor.withValues(alpha: intensity * 0.6),
+        blurRadius: blur * 0.5,
+        spreadRadius: 0,
+        offset: const Offset(0, 2),
+      ),
+    ];
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // PHASE 1.4 V1.4: INNER SHADOWS (untuk pressed states)
+  // ─────────────────────────────────────────────────────────────────────────
+
+  /// Inner shadow untuk efek "pressed" atau "inset"
+  /// Menggunakan BoxShadow dengan offset negatif untuk simulasi inner shadow
+  static List<BoxShadow> inner({
+    Color color = const Color(0x40000000),
+    double blur = 4,
+    double spread = 0,
+  }) {
+    return [
+      // Top inner shadow
+      BoxShadow(
+        color: color,
+        blurRadius: blur,
+        spreadRadius: spread,
+        offset: const Offset(0, 2),
+        blurStyle: BlurStyle.inner,
+      ),
+    ];
+  }
+
+  /// Multi-layer shadow untuk efek depth yang lebih natural (Apple-style)
+  /// Kombinasi 2-3 layer shadow dengan berbagai intensity
+  static List<BoxShadow> elevated({int level = 1}) {
+    switch (level) {
+      case 0:
+        return none;
+      case 1:
+        return [
+          const BoxShadow(
+            color: Color(0x0A000000),
+            blurRadius: 1,
+            offset: Offset(0, 1),
+          ),
+          const BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+        ];
+      case 2:
+        return [
+          const BoxShadow(
+            color: Color(0x0D000000),
+            blurRadius: 2,
+            offset: Offset(0, 1),
+          ),
+          const BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 8,
+            offset: Offset(0, 4),
+          ),
+          const BoxShadow(
+            color: Color(0x26000000),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
+        ];
+      case 3:
+      default:
+        return [
+          const BoxShadow(
+            color: Color(0x0D000000),
+            blurRadius: 2,
+            offset: Offset(0, 1),
+          ),
+          const BoxShadow(
+            color: Color(0x1A000000),
+            blurRadius: 12,
+            offset: Offset(0, 6),
+          ),
+          const BoxShadow(
+            color: Color(0x33000000),
+            blurRadius: 24,
+            offset: Offset(0, 12),
+          ),
+        ];
+    }
+  }
 }
 
 // =============================================================================
@@ -549,4 +761,282 @@ class AppTheme {
       ),
     );
   }
+}
+
+// =============================================================================
+// PHASE 1.4 V1.4: GLASS DECORATION
+// Helper class untuk membuat glassmorphism BoxDecoration dengan mudah
+// =============================================================================
+
+enum GlassVariant {
+  /// Full frosted glass dengan blur effect
+  frosted,
+
+  /// Solid colored dengan gradient overlay
+  solid,
+
+  /// Gradient background tanpa blur
+  gradient,
+
+  /// Border only, transparent background
+  outlined,
+}
+
+class GlassDecoration {
+  GlassDecoration._();
+
+  /// Membuat BoxDecoration untuk efek glassmorphism
+  ///
+  /// [variant] - Tipe glass effect yang diinginkan
+  /// [accentColor] - Warna accent untuk tint/glow (optional)
+  /// [borderRadius] - Border radius, default 20
+  /// [withBorder] - Apakah menampilkan border, default true
+  /// [opacity] - Opacity background (0.0-1.0), default 0.1
+  static BoxDecoration create({
+    GlassVariant variant = GlassVariant.frosted,
+    Color? accentColor,
+    double borderRadius = 20,
+    bool withBorder = true,
+    double opacity = 0.1,
+  }) {
+    final radius = BorderRadius.circular(borderRadius);
+
+    switch (variant) {
+      case GlassVariant.frosted:
+        return BoxDecoration(
+          color: Colors.white.withValues(alpha: opacity),
+          borderRadius: radius,
+          border: withBorder ? _createGlassBorder() : null,
+        );
+
+      case GlassVariant.solid:
+        return BoxDecoration(
+          color: (accentColor ?? AppColors.bgCard).withValues(alpha: 0.9),
+          borderRadius: radius,
+          border: withBorder
+              ? Border.all(
+                  color: AppColors.border,
+                  width: 1,
+                )
+              : null,
+          boxShadow: AppShadows.elevated(level: 1),
+        );
+
+      case GlassVariant.gradient:
+        return BoxDecoration(
+          gradient: accentColor != null
+              ? LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    accentColor.withValues(alpha: 0.15),
+                    accentColor.withValues(alpha: 0.05),
+                  ],
+                )
+              : AppColors.glassGradientNeutral,
+          borderRadius: radius,
+          border: withBorder ? _createGlassBorder() : null,
+        );
+
+      case GlassVariant.outlined:
+        return BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: radius,
+          border: Border.all(
+            color: accentColor?.withValues(alpha: 0.5) ??
+                AppColors.glassBorderLight,
+            width: 1.5,
+          ),
+        );
+    }
+  }
+
+  /// Membuat border dengan efek depth (terang di atas, gelap di bawah)
+  static Border _createGlassBorder() {
+    return const Border(
+      top: BorderSide(color: AppColors.glassBorderLight, width: 1),
+      left: BorderSide(color: AppColors.glassBorderSubtle, width: 1),
+      right: BorderSide(color: AppColors.glassBorderDark, width: 1),
+      bottom: BorderSide(color: AppColors.glassBorderDark, width: 1),
+    );
+  }
+
+  /// Border gradient untuk efek premium
+  /// Digunakan dengan CustomPainter atau ShaderMask
+  static LinearGradient get borderGradient => const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          AppColors.glassBorderLight,
+          AppColors.glassBorderDark,
+        ],
+      );
+
+  /// Preset decorations untuk penggunaan cepat
+  static BoxDecoration get cardFrosted => create(variant: GlassVariant.frosted);
+  static BoxDecoration get cardSolid => create(variant: GlassVariant.solid);
+  static BoxDecoration get cardGradient =>
+      create(variant: GlassVariant.gradient);
+  static BoxDecoration get cardOutlined =>
+      create(variant: GlassVariant.outlined);
+
+  /// Card dengan accent color tertentu
+  static BoxDecoration primaryCard() => create(
+        variant: GlassVariant.gradient,
+        accentColor: AppColors.brandPrimary,
+      );
+
+  static BoxDecoration secondaryCard() => create(
+        variant: GlassVariant.gradient,
+        accentColor: AppColors.brandSecondary,
+      );
+
+  static BoxDecoration tertiaryCard() => create(
+        variant: GlassVariant.gradient,
+        accentColor: AppColors.brandTertiary,
+      );
+}
+
+// =============================================================================
+// PHASE 1.4 V1.4: DEPTH TOKENS
+// Sistem elevation yang konsisten untuk kedalaman visual
+// =============================================================================
+
+enum DepthLevel {
+  /// Level 0: Surface - No elevation (flat)
+  surface,
+
+  /// Level 1: Raised - Slight elevation (+8dp shadow)
+  raised,
+
+  /// Level 2: Floating - Medium elevation (+16dp shadow)
+  floating,
+
+  /// Level 3: Modal - High elevation (+24dp shadow)
+  modal,
+}
+
+class DepthTokens {
+  DepthTokens._();
+
+  /// Mendapatkan BoxShadow berdasarkan DepthLevel
+  static List<BoxShadow> getShadow(DepthLevel level) {
+    switch (level) {
+      case DepthLevel.surface:
+        return AppShadows.none;
+      case DepthLevel.raised:
+        return AppShadows.elevated(level: 1);
+      case DepthLevel.floating:
+        return AppShadows.elevated(level: 2);
+      case DepthLevel.modal:
+        return AppShadows.elevated(level: 3);
+    }
+  }
+
+  /// Mendapatkan BoxShadow dengan ambient glow berdasarkan level
+  static List<BoxShadow> getShadowWithGlow(
+      DepthLevel level, Color accentColor) {
+    final baseShadows = getShadow(level);
+    if (level == DepthLevel.surface) return baseShadows;
+
+    // Combine base shadows dengan ambient glow
+    return [
+      ...baseShadows,
+      ...AppShadows.ambient(
+        accentColor,
+        intensity: _getGlowIntensity(level),
+        blur: _getGlowBlur(level),
+      ),
+    ];
+  }
+
+  static double _getGlowIntensity(DepthLevel level) {
+    switch (level) {
+      case DepthLevel.surface:
+        return 0.0;
+      case DepthLevel.raised:
+        return 0.15;
+      case DepthLevel.floating:
+        return 0.25;
+      case DepthLevel.modal:
+        return 0.35;
+    }
+  }
+
+  static double _getGlowBlur(DepthLevel level) {
+    switch (level) {
+      case DepthLevel.surface:
+        return 0;
+      case DepthLevel.raised:
+        return 12;
+      case DepthLevel.floating:
+        return 20;
+      case DepthLevel.modal:
+        return 30;
+    }
+  }
+
+  /// Mendapatkan background color dengan opacity berdasarkan level
+  /// Semakin tinggi level, semakin solid warnanya
+  static Color getBackgroundColor(DepthLevel level, {Color? customColor}) {
+    final baseColor = customColor ?? AppColors.bgCard;
+    switch (level) {
+      case DepthLevel.surface:
+        return baseColor;
+      case DepthLevel.raised:
+        return baseColor.withValues(alpha: 0.95);
+      case DepthLevel.floating:
+        return baseColor;
+      case DepthLevel.modal:
+        return AppColors.bgElevated;
+    }
+  }
+
+  /// Mendapatkan complete BoxDecoration untuk level tertentu
+  static BoxDecoration getDecoration(
+    DepthLevel level, {
+    Color? accentColor,
+    double borderRadius = 16,
+    bool withGlow = false,
+  }) {
+    return BoxDecoration(
+      color: getBackgroundColor(level),
+      borderRadius: BorderRadius.circular(borderRadius),
+      border: Border.all(
+        color: level == DepthLevel.modal
+            ? AppColors.borderFocused
+            : AppColors.border,
+        width: 1,
+      ),
+      boxShadow: withGlow && accentColor != null
+          ? getShadowWithGlow(level, accentColor)
+          : getShadow(level),
+    );
+  }
+}
+
+// =============================================================================
+// PHASE 1.4 V1.4: GLASS BLUR FILTER
+// Helper untuk BackdropFilter dengan blur settings
+// =============================================================================
+
+class GlassBlur {
+  GlassBlur._();
+
+  /// Blur amount presets
+  static const double light = 10.0;
+  static const double medium = 15.0;
+  static const double heavy = 25.0;
+  static const double extreme = 40.0;
+
+  /// Membuat ImageFilter untuk BackdropFilter
+  static ImageFilter blur({double sigma = medium}) {
+    return ImageFilter.blur(sigmaX: sigma, sigmaY: sigma);
+  }
+
+  /// Preset blur filters
+  static ImageFilter get blurLight => blur(sigma: light);
+  static ImageFilter get blurMedium => blur(sigma: medium);
+  static ImageFilter get blurHeavy => blur(sigma: heavy);
+  static ImageFilter get blurExtreme => blur(sigma: extreme);
 }

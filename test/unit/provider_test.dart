@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:gym_tracker_flutter/core/workout_provider.dart';
+import 'package:gym_tracker_flutter/core/settings_provider.dart';
 import 'package:gym_tracker_flutter/models/models.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -26,8 +27,9 @@ void main() {
     });
 
     test('finishWorkout should reset state', () {
+      final settings = SettingsProvider();
       provider.startWorkout();
-      provider.finishWorkout();
+      provider.finishWorkout(settings);
       expect(provider.isActive, false);
       expect(provider.exercises, isEmpty);
     });

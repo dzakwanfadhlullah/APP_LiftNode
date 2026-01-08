@@ -10,6 +10,7 @@ import '../core/app_theme.dart';
 import '../core/shared_widgets.dart';
 import '../core/workout_provider.dart';
 import '../core/settings_provider.dart';
+import '../core/achievement_constants.dart';
 
 // =============================================================================
 // PHASE 6: PROFILE SCREEN ENHANCEMENTS
@@ -30,12 +31,9 @@ class _ProfileScreenState extends State<ProfileScreen>
   bool _autoRestTimer = true;
   int _defaultRestSeconds = 90;
   String _weightUnit = 'kg';
-  String _selectedTheme = 'dark';
-  Color _accentColor = AppColors.brandPrimary;
 
   // Animation controller
   late AnimationController _animController;
-  late Animation<double> _levelAnimation;
 
   @override
   void initState() {
@@ -43,9 +41,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     _animController = AnimationController(
       duration: AppAnimations.slow,
       vsync: this,
-    );
-    _levelAnimation = Tween<double>(begin: 0, end: 0.75).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
     );
     _animController.forward();
 
@@ -63,7 +58,6 @@ class _ProfileScreenState extends State<ProfileScreen>
       _autoRestTimer = settings.autoRestTimer;
       _defaultRestSeconds = settings.defaultRestSeconds;
       _weightUnit = settings.weightUnit;
-      _accentColor = settings.accentColor;
     });
   }
 
@@ -91,19 +85,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                 _buildStatsGrid(),
                 Spacing.vXl,
                 // Achievements
-                _buildSectionTitle('ACHIEVEMENTS'),
-                Spacing.vMd,
                 _buildAchievements(),
                 Spacing.vXl,
                 // 6.3 Settings & Preferences
                 _buildSectionTitle('PREFERENCES'),
                 Spacing.vMd,
                 _buildPreferencesSection(),
-                Spacing.vXl,
-                // 6.4 Appearance
-                _buildSectionTitle('APPEARANCE'),
-                Spacing.vMd,
-                _buildAppearanceSection(),
                 Spacing.vXl,
                 // Account
                 _buildSectionTitle('ACCOUNT'),
@@ -147,7 +134,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      _accentColor.withValues(alpha: 0.15),
+                      AppColors.brandPrimary.withValues(alpha: 0.15),
                       Colors.transparent,
                     ],
                   ),
@@ -169,14 +156,23 @@ class _ProfileScreenState extends State<ProfileScreen>
                       SizedBox(
                         width: 120,
                         height: 120,
-                        child: AnimatedBuilder(
-                          animation: _levelAnimation,
-                          builder: (context, child) {
-                            return CircularProgressIndicator(
-                              value: _levelAnimation.value,
-                              strokeWidth: 4,
-                              color: _accentColor,
-                              backgroundColor: AppColors.bgCard,
+                        child: Consumer<SettingsProvider>(
+                          builder: (context, settings, _) {
+                            return TweenAnimationBuilder<double>(
+                              tween: Tween(
+                                begin: 0,
+                                end: settings.levelProgress.clamp(0.0, 1.0),
+                              ),
+                              duration: AppAnimations.slow,
+                              curve: Curves.easeOutCubic,
+                              builder: (context, value, _) {
+                                return CircularProgressIndicator(
+                                  value: value,
+                                  strokeWidth: 4,
+                                  color: AppColors.brandPrimary,
+                                  backgroundColor: AppColors.bgCard,
+                                );
+                              },
                             );
                           },
                         ),
@@ -197,11 +193,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                               shape: BoxShape.circle,
                               color: AppColors.bgCard,
                               border: Border.all(
-                                  color: _accentColor.withValues(alpha: 0.3),
+                                  color: AppColors.brandPrimary
+                                      .withValues(alpha: 0.1),
                                   width: 3),
                               boxShadow: [
                                 BoxShadow(
-                                  color: _accentColor.withValues(alpha: 0.2),
+                                  color: AppColors.brandPrimary
+                                      .withValues(alpha: 0.2),
                                   blurRadius: 20,
                                   spreadRadius: 5,
                                 ),
@@ -211,7 +209,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                               child: Text(
                                 initials.isEmpty ? 'A' : initials,
                                 style: AppTypography.displayMedium.copyWith(
-                                  color: _accentColor,
+                                  color: AppColors.brandPrimary,
                                   fontSize: 36,
                                 ),
                               ),
@@ -228,25 +226,30 @@ class _ProfileScreenState extends State<ProfileScreen>
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [
-                                _accentColor,
-                                _accentColor.withValues(alpha: 0.8)
+                                AppColors.brandPrimary,
+                                AppColors.brandPrimary.withValues(alpha: 0.8)
                               ],
                             ),
                             borderRadius: AppRadius.roundedFull,
                             boxShadow: [
                               BoxShadow(
-                                color: _accentColor.withValues(alpha: 0.5),
+                                color: AppColors.brandPrimary
+                                    .withValues(alpha: 0.5),
                                 blurRadius: 8,
                               ),
                             ],
                           ),
-                          child: const Text(
-                            'LVL 24',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          child: Consumer<SettingsProvider>(
+                            builder: (context, settings, _) {
+                              return Text(
+                                'LVL ${settings.userLevel}',
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              );
+                            },
                           ),
                         ),
                       ),
@@ -306,12 +309,13 @@ class _ProfileScreenState extends State<ProfileScreen>
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(LucideIcons.crown, size: 14, color: _accentColor),
+                      const Icon(LucideIcons.crown,
+                          size: 14, color: AppColors.onPrimary),
                       Spacing.hXs,
                       Text(
                         'ELITE MEMBER',
                         style: AppTypography.labelSmall
-                            .copyWith(color: _accentColor),
+                            .copyWith(color: AppColors.onPrimary),
                       ),
                     ],
                   ),
@@ -406,75 +410,49 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   Widget _buildAchievements() {
-    final achievements = [
-      {
-        'icon': LucideIcons.flame,
-        'label': '7 Day Streak',
-        'color': const Color(0xFFF97316),
-        'unlocked': true
-      },
-      {
-        'icon': LucideIcons.dumbbell,
-        'label': 'Weightlifter',
-        'color': const Color(0xFF3B82F6),
-        'unlocked': true
-      },
-      {
-        'icon': LucideIcons.zap,
-        'label': 'High Intensity',
-        'color': const Color(0xFFEAB308),
-        'unlocked': true
-      },
-      {
-        'icon': LucideIcons.medal,
-        'label': 'Early Bird',
-        'color': AppColors.brandPrimary,
-        'unlocked': true
-      },
-      {
-        'icon': LucideIcons.star,
-        'label': '100 Workouts',
-        'color': AppColors.textMuted,
-        'unlocked': false
-      },
-    ];
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, _) {
+        final achievements = AchievementRules.defaultAchievements;
 
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: achievements.map((a) {
-          final unlocked = a['unlocked'] as bool;
-          return Padding(
-            padding: const EdgeInsets.only(right: 10),
-            child: GymCard(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              child: Opacity(
-                opacity: unlocked ? 1.0 : 0.4,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      a['icon'] as IconData,
-                      size: 16,
-                      color: a['color'] as Color,
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: achievements.map((a) {
+              final unlocked = settings.isAchievementUnlocked(a.id);
+              return Padding(
+                padding: const EdgeInsets.only(right: 10),
+                child: GymCard(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  child: Opacity(
+                    opacity: unlocked ? 1.0 : 0.4,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          a.icon,
+                          size: 16,
+                          color: a.color,
+                        ),
+                        Spacing.hSm,
+                        Text(
+                          a.title,
+                          style: AppTypography.labelSmall,
+                        ),
+                        if (!unlocked) ...[
+                          Spacing.hSm,
+                          const Icon(LucideIcons.lock,
+                              size: 12, color: AppColors.textMuted),
+                        ],
+                      ],
                     ),
-                    Spacing.hSm,
-                    Text(
-                      a['label'] as String,
-                      style: AppTypography.labelSmall,
-                    ),
-                    if (!unlocked) ...[
-                      Spacing.hSm,
-                      const Icon(LucideIcons.lock,
-                          size: 12, color: AppColors.textMuted),
-                    ],
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          );
-        }).toList(),
-      ),
+              );
+            }).toList(),
+          ),
+        );
+      },
     );
   }
 
@@ -757,168 +735,6 @@ class _ProfileScreenState extends State<ProfileScreen>
   // 6.4 APPEARANCE / THEME
   // ===========================================================================
 
-  Widget _buildAppearanceSection() {
-    final accentColors = [
-      AppColors.brandPrimary,
-      const Color(0xFF3B82F6), // Blue
-      const Color(0xFFA855F7), // Purple
-      const Color(0xFFF97316), // Orange
-      const Color(0xFFEF4444), // Red
-      const Color(0xFF14B8A6), // Teal
-    ];
-
-    return GymCard(
-      padding: EdgeInsets.zero,
-      child: Column(
-        children: [
-          // Theme mode
-          Padding(
-            padding: Spacing.paddingCard,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: const BoxDecoration(
-                        color: AppColors.bgCardHover,
-                        borderRadius: AppRadius.roundedMd,
-                      ),
-                      child: const Icon(LucideIcons.palette,
-                          size: 20, color: AppColors.textSecondary),
-                    ),
-                    Spacing.hMd,
-                    const Text('Theme', style: AppTypography.titleMedium),
-                  ],
-                ),
-                Spacing.vMd,
-                Row(
-                  children: [
-                    _buildThemeOption('dark', LucideIcons.moon, 'Dark'),
-                    Spacing.hMd,
-                    _buildThemeOption('light', LucideIcons.sun, 'Light'),
-                    Spacing.hMd,
-                    _buildThemeOption('auto', LucideIcons.monitor, 'System'),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const GymDivider(height: 1),
-          // Accent color
-          Padding(
-            padding: Spacing.paddingCard,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: const BoxDecoration(
-                        color: AppColors.bgCardHover,
-                        borderRadius: AppRadius.roundedMd,
-                      ),
-                      child: const Icon(LucideIcons.paintbrush,
-                          size: 20, color: AppColors.textSecondary),
-                    ),
-                    Spacing.hMd,
-                    const Text('Accent Color',
-                        style: AppTypography.titleMedium),
-                  ],
-                ),
-                Spacing.vMd,
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: accentColors.map((color) {
-                    final isSelected = color == _accentColor;
-                    return GestureDetector(
-                      onTap: () {
-                        if (!kIsWeb) HapticFeedback.selectionClick();
-                        setState(() => _accentColor = color);
-                        context.read<SettingsProvider>().setAccentColor(color);
-                      },
-                      child: AnimatedContainer(
-                        duration: AppAnimations.fast,
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: color,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color:
-                                isSelected ? Colors.white : Colors.transparent,
-                            width: 3,
-                          ),
-                          boxShadow: isSelected
-                              ? [
-                                  BoxShadow(
-                                    color: color.withValues(alpha: 0.5),
-                                    blurRadius: 12,
-                                  ),
-                                ]
-                              : null,
-                        ),
-                        child: isSelected
-                            ? const Icon(LucideIcons.check,
-                                size: 18, color: Colors.black)
-                            : null,
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildThemeOption(String theme, IconData icon, String label) {
-    final isSelected = _selectedTheme == theme;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          if (!kIsWeb) HapticFeedback.selectionClick();
-          setState(() => _selectedTheme = theme);
-        },
-        child: AnimatedContainer(
-          duration: AppAnimations.fast,
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppColors.brandPrimary.withValues(alpha: 0.1)
-                : AppColors.bgCardHover,
-            borderRadius: AppRadius.roundedMd,
-            border: Border.all(
-              color: isSelected ? AppColors.brandPrimary : AppColors.border,
-            ),
-          ),
-          child: Column(
-            children: [
-              Icon(icon,
-                  size: 22,
-                  color: isSelected
-                      ? AppColors.brandPrimary
-                      : AppColors.textSecondary),
-              Spacing.vXs,
-              Text(
-                label,
-                style: AppTypography.labelSmall.copyWith(
-                  color: isSelected
-                      ? AppColors.brandPrimary
-                      : AppColors.textSecondary,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   // ===========================================================================
   // ACCOUNT SECTION
   // ===========================================================================
@@ -1168,8 +984,28 @@ class _StatCard extends StatelessWidget {
 // EDIT PROFILE SHEET
 // =============================================================================
 
-class _EditProfileSheet extends StatelessWidget {
+class _EditProfileSheet extends StatefulWidget {
   const _EditProfileSheet();
+
+  @override
+  State<_EditProfileSheet> createState() => _EditProfileSheetState();
+}
+
+class _EditProfileSheetState extends State<_EditProfileSheet> {
+  late TextEditingController _nameController;
+
+  @override
+  void initState() {
+    super.initState();
+    final settings = context.read<SettingsProvider>();
+    _nameController = TextEditingController(text: settings.userName);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1236,7 +1072,8 @@ class _EditProfileSheet extends StatelessWidget {
           ),
           Spacing.vXl,
           // Name input
-          const GymInput(
+          GymInput(
+            controller: _nameController,
             label: 'Display Name',
             hint: 'Enter your name',
             prefixIcon: LucideIcons.user,
@@ -1260,10 +1097,15 @@ class _EditProfileSheet extends StatelessWidget {
             title: 'Save Changes',
             icon: LucideIcons.check,
             onPress: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Profile updated!')),
-              );
+              if (_nameController.text.trim().isNotEmpty) {
+                context
+                    .read<SettingsProvider>()
+                    .setUserName(_nameController.text.trim());
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Profile updated!')),
+                );
+              }
             },
           ),
           Spacing.vMd,

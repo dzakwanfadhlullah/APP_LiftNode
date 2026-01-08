@@ -1,10 +1,14 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/models.dart';
 import 'constants.dart'; // Required for recent exercise lookup
+import 'settings_provider.dart';
+import 'achievement_constants.dart';
+import 'notification_service.dart';
 
 class WorkoutProvider with ChangeNotifier {
   bool _isActive = false;
@@ -17,13 +21,23 @@ class WorkoutProvider with ChangeNotifier {
   List<ActiveExercise> _exercises = [];
   List<Exercise> _customExercises = [];
   List<String> _favoriteIds = [];
+  List<Achievement> _newlyUnlockedAchievements = [];
+
+  List<Achievement> get newlyUnlockedAchievements => _newlyUnlockedAchievements;
+  void clearNewlyUnlockedAchievements() {
+    _newlyUnlockedAchievements = [];
+    notifyListeners();
+  }
+
   List<WorkoutHistory> _history = [];
+  List<WorkoutTemplate> _templates = [];
   Timer? _timer;
   String? _errorMessage;
 
   // Debounce timer for save operations
   Timer? _saveDebounce;
   static const _saveDebounceMs = 500;
+  static const _stateVersion = 2;
 
   // Best streak tracking
   int _bestStreak = 0;
@@ -49,6 +63,47 @@ class WorkoutProvider with ChangeNotifier {
   WorkoutHistory? get lastSession =>
       _history.isNotEmpty ? _history.first : null;
   List<String> get favoriteIds => List.unmodifiable(_favoriteIds);
+  List<WorkoutTemplate> get templates => List.unmodifiable(_templates);
+
+  // XP & Level Calculation (Phase 2.6)
+  int get totalWorkouts => _history.length;
+
+  int get weeklyWorkoutCount {
+    final now = DateTime.now();
+    final firstDayOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    final startOfDisplayWeek =
+        DateTime(firstDayOfWeek.year, firstDayOfWeek.month, firstDayOfWeek.day);
+
+    return _history.where((w) => w.date.isAfter(startOfDisplayWeek)).length;
+  }
+
+  /// Returns the sets from the most recent session containing this exercise
+  List<WorkoutSet>? getLastPerformedSets(String exerciseId) {
+    for (var session in _history) {
+      if (session.details != null) {
+        for (var ex in session.details!) {
+          if (ex.exerciseId == exerciseId) {
+            return ex.sets;
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  double get totalVolume =>
+      _history.fold<double>(0, (sum, w) => sum + w.totalVolume);
+
+  int get xp => (totalWorkouts * 100) + (totalVolume / 100).round();
+
+  int get level => xp > 0 ? sqrt(xp / 500).floor() : 0;
+
+  double get levelProgress {
+    if (level == 0) return xp / 500;
+    final currentLevelXp = (level * level) * 500;
+    final nextLevelXp = ((level + 1) * (level + 1)) * 500;
+    return (xp - currentLevelXp) / (nextLevelXp - currentLevelXp);
+  }
 
   List<Exercise> getRecentExercises() {
     final recentNames = <String>{};
@@ -137,7 +192,7 @@ class WorkoutProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void finishWorkout() {
+  void finishWorkout(SettingsProvider settings) {
     if (_isActive && _exercises.isNotEmpty) {
       final now = DateTime.now();
       final startTime = DateTime.fromMillisecondsSinceEpoch(
@@ -156,7 +211,6 @@ class WorkoutProvider with ChangeNotifier {
       for (var h in _history) {
         for (int i = 0; i < h.exercises.length; i++) {
           final exName = h.exercises[i];
-          // Simple estimation: totalVolume / numExercises as per-exercise volume
           final estVolume = h.totalVolume / h.exercises.length;
           exerciseMaxVolume[exName] =
               (exerciseMaxVolume[exName] ?? 0) > estVolume
@@ -167,7 +221,7 @@ class WorkoutProvider with ChangeNotifier {
 
       for (var ex in _exercises) {
         exerciseNames.add(ex.name);
-        muscleGroups.add(ex.muscle); // Use actual muscle from exercise
+        muscleGroups.add(ex.muscle);
 
         double exVolume = 0;
         for (var set in ex.sets) {
@@ -180,25 +234,34 @@ class WorkoutProvider with ChangeNotifier {
           }
         }
 
-        // Check if this is a PR for this exercise
-        final prevMax = exerciseMaxVolume[ex.name] ?? 0;
-        if (exVolume > prevMax && exVolume > 0) {
+        if (exVolume > (exerciseMaxVolume[ex.name] ?? 0) * 1.1) {
           prCount++;
         }
       }
 
-      final newHistory = WorkoutHistory(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        name: 'Workout on ${now.day}/${now.month}',
+      final history = WorkoutHistory(
+        id: DateTime.now().toIso8601String(),
+        name: 'Workout',
         date: now,
         duration: duration,
         totalVolume: totalVolume,
         exercises: exerciseNames,
         muscleGroups: muscleGroups.toList(),
         prCount: prCount,
+        details: _exercises
+            .map((e) => e.copyWith(
+                  sets: List.from(e.sets),
+                ))
+            .toList(),
       );
 
-      _history = [newHistory, ..._history];
+      _history.insert(0, history);
+      _pruneHistory();
+
+      // XP Calculation & Achievement Check
+      int xpGained = 100 + (totalVolume / 100).floor();
+      settings.addXP(xpGained);
+      _checkAchievements(settings, history);
     }
 
     _isActive = false;
@@ -210,6 +273,42 @@ class WorkoutProvider with ChangeNotifier {
     _exercises = [];
     _saveState();
     notifyListeners();
+  }
+
+  void _checkAchievements(SettingsProvider settings, WorkoutHistory history) {
+    _newlyUnlockedAchievements = [];
+    final allRules = AchievementRules.defaultAchievements;
+
+    for (var rule in allRules) {
+      if (settings.isAchievementUnlocked(rule.id)) continue;
+
+      bool unlocked = false;
+      switch (rule.id) {
+        case 'first_workout':
+          if (_history.length == 1) unlocked = true;
+          break;
+        case 'early_bird':
+          if (history.date.hour < 8) unlocked = true;
+          break;
+        case 'night_owl':
+          if (history.date.hour >= 22) unlocked = true;
+          break;
+        case 'streak_3':
+          if (_calculateStreak() >= 3) unlocked = true;
+          break;
+        case 'volume_1000':
+          if (history.totalVolume >= 1000) unlocked = true;
+          break;
+        case 'marathon_10':
+          if (_history.length >= 10) unlocked = true;
+          break;
+      }
+
+      if (unlocked) {
+        settings.unlockAchievement(rule.id);
+        _newlyUnlockedAchievements.add(rule);
+      }
+    }
   }
 
   void clearHistory() {
@@ -229,7 +328,14 @@ class WorkoutProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final data = prefs.getString('workout_state');
       if (data != null) {
-        final decoded = jsonDecode(data);
+        var decoded = jsonDecode(data) as Map<String, dynamic>;
+
+        // Migration logic
+        final savedVersion = decoded['version'] ?? 0;
+        if (savedVersion < _stateVersion) {
+          decoded = _migrate(decoded, savedVersion);
+        }
+
         _isActive = decoded['isActive'] ?? false;
         _startTime = decoded['startTime'];
         _restStartTime = decoded['restStartTime'];
@@ -251,6 +357,11 @@ class WorkoutProvider with ChangeNotifier {
         if (decoded['favorites'] != null) {
           _favoriteIds = List<String>.from(decoded['favorites']);
         }
+        if (decoded['templates'] != null) {
+          _templates = (decoded['templates'] as List)
+              .map((e) => WorkoutTemplate.fromJson(e))
+              .toList();
+        }
         _bestStreak = decoded['bestStreak'] ?? 0;
         if (_isActive) _startTimer();
       }
@@ -259,6 +370,27 @@ class WorkoutProvider with ChangeNotifier {
       debugPrint('Error loading state: $e');
     }
     notifyListeners();
+  }
+
+  Map<String, dynamic> _migrate(Map<String, dynamic> data, int fromVersion) {
+    debugPrint('Migrating data from version $fromVersion to $_stateVersion');
+    var migrated = Map<String, dynamic>.from(data);
+
+    if (fromVersion < 1) {
+      // Version 1 additions: Ensure lists exist
+      migrated['customExercises'] ??= [];
+      migrated['favorites'] ??= [];
+      migrated['history'] ??= [];
+    }
+
+    if (fromVersion < 2) {
+      // Version 2 additions: Templates
+      migrated['templates'] ??= [];
+    }
+
+    // Future migrations go here...
+
+    return migrated;
   }
 
   Future<void> _saveState() async {
@@ -272,7 +404,9 @@ class WorkoutProvider with ChangeNotifier {
         'customExercises': _customExercises.map((e) => e.toJson()).toList(),
         'favorites': _favoriteIds,
         'history': _history.map((e) => e.toJson()).toList(),
+        'templates': _templates.map((e) => e.toJson()).toList(),
         'bestStreak': _bestStreak,
+        'version': _stateVersion,
       });
       await prefs.setString('workout_state', data);
     } catch (e) {
@@ -365,6 +499,9 @@ class WorkoutProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  int? _restRemainingSeconds;
+  bool _notificationSent = false;
+
   void _startTimer() {
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -380,10 +517,20 @@ class WorkoutProvider with ChangeNotifier {
 
       if (_restStartTime != null) {
         final now = DateTime.now().millisecondsSinceEpoch;
-        final diff = (now - _restStartTime!) ~/ 1000;
-        final m = (diff ~/ 60).toString().padLeft(2, '0');
-        final s = (diff % 60).toString().padLeft(2, '0');
+        final elapsed = (now - _restStartTime!) ~/ 1000;
+
+        final m = (elapsed ~/ 60).toString().padLeft(2, '0');
+        final s = (elapsed % 60).toString().padLeft(2, '0');
         _restElapsedTime = '$m:$s';
+
+        if (_restRemainingSeconds != null) {
+          _restRemainingSeconds = (_restRemainingSeconds! - 1).clamp(0, 999);
+          if (_restRemainingSeconds == 0 && !_notificationSent) {
+            NotificationService.showRestTimerNotification();
+            _notificationSent = true;
+          }
+        }
+
         changed = true;
       }
 
@@ -431,7 +578,7 @@ class WorkoutProvider with ChangeNotifier {
   }
 
   void updateSet(int exIndex, int setIndex,
-      {String? kg, String? reps, String? rpe, SetType? type}) {
+      {String? kg, String? reps, String? rpe, String? note, SetType? type}) {
     final sets = List<WorkoutSet>.from(_exercises[exIndex].sets);
     final currentSet = sets[setIndex];
 
@@ -443,6 +590,7 @@ class WorkoutProvider with ChangeNotifier {
       'previousKg': currentSet.kg,
       'previousReps': currentSet.reps,
       'previousRpe': currentSet.rpe,
+      'previousNote': currentSet.note,
       'previousType': currentSet.type,
     };
 
@@ -450,6 +598,7 @@ class WorkoutProvider with ChangeNotifier {
       kg: kg ?? currentSet.kg,
       reps: reps ?? currentSet.reps,
       rpe: rpe ?? currentSet.rpe,
+      note: note ?? currentSet.note,
       type: type ?? currentSet.type,
     );
 
@@ -505,12 +654,10 @@ class WorkoutProvider with ChangeNotifier {
 
     if (isNowComplete) {
       _restStartTime = DateTime.now().millisecondsSinceEpoch;
-      // Use config duration if provided
-      if (restDurationSeconds != null) {
-        // We might want to store target rest time in future for countdown
-        // For now, we just start the timer (which is count up).
-        // To implement countdown, we'd need _restDuration field.
-      }
+      _restRemainingSeconds =
+          restDurationSeconds ?? 90; // Default to 90 if not passed
+      _notificationSent = false;
+
       if (!kIsWeb) HapticFeedback.mediumImpact();
     }
 
@@ -520,6 +667,176 @@ class WorkoutProvider with ChangeNotifier {
 
   void addCustomExercise(Exercise exercise) {
     _customExercises.add(exercise);
+    _saveState();
+    notifyListeners();
+  }
+
+  // ===========================================================================
+  // PHASE 2 ACTIONS (Reorder, Replace, Repeat)
+  // ===========================================================================
+
+  void reorderExercises(int oldIndex, int newIndex) {
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    final item = _exercises.removeAt(oldIndex);
+    _exercises.insert(newIndex, item);
+    // Simple undo tracking for reorder is complex, might skip undo for now
+    _saveStateDebounced();
+    notifyListeners();
+  }
+
+  void replaceExercise(int index, Exercise newEx) {
+    if (index < 0 || index >= _exercises.length) return;
+
+    final oldEx = _exercises[index];
+    // Keep set count but reset data (safer than mapping incompatible weights)
+    final newSets = oldEx.sets.map((s) {
+      return s.copyWith(
+        kg: '0',
+        reps: '0',
+        rpe: null,
+        completed: false,
+        note: null, // Clear notes as they might be specific to the exercise
+      );
+    }).toList();
+
+    final newActive = ActiveExercise(
+      id: DateTime.now().millisecondsSinceEpoch.toString(), // New unique ID
+      exerciseId: newEx.id,
+      name: newEx.name,
+      muscle: newEx.muscle,
+      equipment: newEx.equipment,
+      sets: newSets,
+    );
+
+    _exercises[index] = newActive;
+    _saveStateDebounced();
+    notifyListeners();
+  }
+
+  void startWorkoutFromHistory(WorkoutHistory history) {
+    if (_isActive) return; // Prevent overwriting active session without warning
+
+    _isActive = true;
+    _startTime = DateTime.now().millisecondsSinceEpoch;
+    _startTimer();
+
+    if (history.details != null && history.details!.isNotEmpty) {
+      // V1.3+ Data: Clone detailed history
+      _exercises = history.details!.map((e) {
+        return ActiveExercise(
+          id: DateTime.now()
+              .add(Duration(microseconds: history.details!.indexOf(e)))
+              .millisecondsSinceEpoch
+              .toString(), // Generate new IDs
+          exerciseId: e.exerciseId,
+          name: e.name,
+          muscle: e.muscle,
+          equipment: e.equipment,
+          sets: e.sets.map((s) {
+            return s.copyWith(
+                id: DateTime.now() // Unique IDs for sets too
+                    .add(Duration(microseconds: e.sets.indexOf(s)))
+                    .microsecondsSinceEpoch
+                    .toString(),
+                completed: false, // Reset completion
+                // Keep kg/reps as targets
+                note: null // Optional: clear notes
+                );
+          }).toList(),
+        );
+      }).toList();
+    } else {
+      // V1.0 Data: Fallback to names
+      _exercises = [];
+      final allEx = [...AppConstants.exerciseDb, ..._customExercises];
+      for (final name in history.exercises) {
+        try {
+          final dbEx = allEx.firstWhere((e) => e.name == name);
+          addExercise(dbEx);
+        } catch (_) {
+          // Skip if not found
+        }
+      }
+    }
+    _saveState();
+    notifyListeners();
+  }
+
+  // ===========================================================================
+  // TEMPLATE MANAGEMENT
+  // ===========================================================================
+
+  void addTemplate(WorkoutTemplate template) {
+    _templates.add(template);
+    _saveState();
+    notifyListeners();
+  }
+
+  void updateTemplate(WorkoutTemplate template) {
+    final index = _templates.indexWhere((t) => t.id == template.id);
+    if (index != -1) {
+      _templates[index] = template;
+      _saveState();
+      notifyListeners();
+    }
+  }
+
+  void deleteTemplate(String id) {
+    _templates.removeWhere((t) => t.id == id);
+    _saveState();
+    notifyListeners();
+  }
+
+  void saveHistoryAsTemplate(WorkoutHistory history, String name) {
+    final template = WorkoutTemplate(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: name,
+      exercises: history.details ?? [], // History details can be used directly
+      lastUsed: DateTime.now(),
+    );
+    addTemplate(template);
+  }
+
+  void startWorkoutFromTemplate(WorkoutTemplate template) {
+    if (_isActive) return;
+
+    _isActive = true;
+    _startTime = DateTime.now().millisecondsSinceEpoch;
+    _startTimer();
+
+    // Deep clone exercises and reset sets
+    _exercises = template.exercises.map((e) {
+      return ActiveExercise(
+        id: DateTime.now()
+            .add(Duration(microseconds: template.exercises.indexOf(e)))
+            .millisecondsSinceEpoch
+            .toString(),
+        exerciseId: e.exerciseId,
+        name: e.name,
+        muscle: e.muscle,
+        equipment: e.equipment,
+        sets: e.sets.map((s) {
+          return s.copyWith(
+            id: DateTime.now()
+                .add(Duration(microseconds: e.sets.indexOf(s)))
+                .microsecondsSinceEpoch
+                .toString(),
+            completed: false,
+            // Keep kg/reps as target values (optional, some users prefer clean slate)
+          );
+        }).toList(),
+      );
+    }).toList();
+
+    _templates = _templates.map((t) {
+      if (t.id == template.id) {
+        return t.copyWith(lastUsed: DateTime.now());
+      }
+      return t;
+    }).toList();
+
     _saveState();
     notifyListeners();
   }

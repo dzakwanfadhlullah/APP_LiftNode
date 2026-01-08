@@ -30,25 +30,35 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
   @override
   void initState() {
     super.initState();
-    // 9.2 Data Resilience - Error Listener
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final provider = context.read<WorkoutProvider>();
-      provider.addListener(() {
-        if (provider.errorMessage != null && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(provider.errorMessage!),
-              backgroundColor: AppColors.error,
-              action: SnackBarAction(
-                label: 'Dismiss',
-                textColor: Colors.white,
-                onPressed: provider.clearError,
-              ),
-            ),
-          );
-        }
-      });
+      context.read<WorkoutProvider>().addListener(_errorListener);
     });
+  }
+
+  @override
+  void dispose() {
+    // Phase 2.11: Fix memory leak
+    if (mounted) {
+      context.read<WorkoutProvider>().removeListener(_errorListener);
+    }
+    super.dispose();
+  }
+
+  void _errorListener() {
+    final provider = context.read<WorkoutProvider>();
+    if (provider.errorMessage != null && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(provider.errorMessage!),
+          backgroundColor: AppColors.error,
+          action: SnackBarAction(
+            label: 'Dismiss',
+            textColor: Colors.white,
+            onPressed: provider.clearError,
+          ),
+        ),
+      );
+    }
   }
 
   @override
@@ -76,16 +86,40 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
                           if (exercises.isEmpty) {
                             return _buildEmptyState(context);
                           }
-                          return Column(
-                            children: exercises.asMap().entries.map((entry) {
-                              return _ExerciseCard(
-                                key: ValueKey('exercise_${entry.key}'),
-                                exIndex: entry.key,
-                                exercise: entry.value,
-                                onDeleteSet: (setIndex) => _confirmDeleteSet(
-                                    context, entry.key, setIndex),
+                          return ReorderableListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: exercises.length,
+                            onReorder: (oldIndex, newIndex) {
+                              context
+                                  .read<WorkoutProvider>()
+                                  .reorderExercises(oldIndex, newIndex);
+                            },
+                            proxyDecorator: (child, index, animation) {
+                              return AnimatedBuilder(
+                                animation: animation,
+                                builder: (BuildContext context, Widget? child) {
+                                  return Material(
+                                    color: Colors.transparent,
+                                    shadowColor: Colors.black,
+                                    elevation: 8.0 * animation.value,
+                                    child: child,
+                                  );
+                                },
+                                child: child,
                               );
-                            }).toList(),
+                            },
+                            itemBuilder: (context, index) {
+                              final exercise = exercises[index];
+                              return _ExerciseCard(
+                                key: ValueKey(
+                                    exercise.id), // Important for reorder
+                                exercise: exercise,
+                                index: index,
+                                onDeleteSet: (setIndex) =>
+                                    _confirmDeleteSet(context, index, setIndex),
+                              );
+                            },
                           );
                         },
                       ),
@@ -95,8 +129,8 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
                         builder: (context, hasExercises, child) {
                           if (!hasExercises) return const SizedBox.shrink();
                           return NeonButton(
-                            title: 'Add Exercise',
-                            variant: 'secondary',
+                            variant: 'outline',
+                            title: 'ADD EXERCISE',
                             icon: LucideIcons.plus,
                             onPress: () => _showExerciseModal(context),
                           );
@@ -458,7 +492,7 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
             size: ButtonSize.small,
             onPress: () {
               Navigator.pop(context);
-              provider.finishWorkout();
+              provider.finishWorkout(context.read<SettingsProvider>());
             },
           ),
         ],
@@ -544,7 +578,7 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
         exercises: provider.exercises,
         onFinish: () {
           Navigator.pop(context);
-          provider.finishWorkout();
+          provider.finishWorkout(context.read<SettingsProvider>());
         },
         onContinue: () => Navigator.pop(context),
       ),
@@ -557,13 +591,13 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
 // =============================================================================
 
 class _ExerciseCard extends StatelessWidget {
-  final int exIndex;
+  final int index;
   final ActiveExercise exercise;
   final Function(int setIndex) onDeleteSet;
 
   const _ExerciseCard({
     super.key,
-    required this.exIndex,
+    required this.index,
     required this.exercise,
     required this.onDeleteSet,
   });
@@ -577,51 +611,14 @@ class _ExerciseCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
         children: [
-          // Exercise header with drag handle
-          Padding(
-            padding: Spacing.paddingCard,
-            child: Row(
-              children: [
-                // Drag handle
-                const Icon(
-                  LucideIcons.gripVertical,
-                  size: 18,
-                  color: AppColors.textMuted,
-                ),
-                Spacing.hMd,
-                Expanded(
-                  child: Text(
-                    exercise.name,
-                    style: AppTypography.headlineSmall.copyWith(
-                      color: AppColors.brandPrimary,
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () => _showExerciseOptions(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: const BoxDecoration(
-                      color: AppColors.bgCardHover,
-                      borderRadius: AppRadius.roundedSm,
-                    ),
-                    child: const Icon(
-                      LucideIcons.ellipsis,
-                      size: 16,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+          _buildExerciseHeader(context),
           const GymDivider(height: 1),
           _buildTableHeader(),
           // Sets with swipe-to-delete
           ...exercise.sets.asMap().entries.map((setEntry) {
             return _SetRow(
-              key: ValueKey('set_${exIndex}_${setEntry.key}'),
-              exIndex: exIndex,
+              key: ValueKey('set_${index}_${setEntry.key}'),
+              exIndex: index,
               setIndex: setEntry.key,
               workoutSet: setEntry.value,
               previousSet:
@@ -631,7 +628,7 @@ class _ExerciseCard extends StatelessWidget {
           }),
           // Add set button
           InkWell(
-            onTap: () => provider.addSet(exIndex),
+            onTap: () => provider.addSet(index),
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 14),
               decoration: const BoxDecoration(
@@ -654,6 +651,53 @@ class _ExerciseCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildExerciseHeader(BuildContext context) {
+    return ReorderableDragStartListener(
+      index: index,
+      child: GestureDetector(
+        onTap: () => _showExerciseOptions(
+            context, index, exercise.exerciseId), // Use exerciseId
+        child: Container(
+          color: Colors.transparent, // Hit test target
+          padding: const EdgeInsets.all(16).copyWith(bottom: 0),
+          child: Row(
+            children: [
+              Icon(LucideIcons.gripVertical,
+                  color: AppColors.textMuted.withValues(alpha: 0.5), size: 20),
+              Spacing.hSm,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      exercise.name,
+                      style: AppTypography.titleMedium.copyWith(
+                        color: AppColors.brandPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (exercise.muscle.isNotEmpty) ...[
+                      Spacing.vXxs,
+                      Text(
+                        exercise.muscle.toUpperCase(),
+                        style: AppTypography.overline,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.more_vert, size: 20),
+                onPressed: () => _showExerciseOptions(
+                    context, index, exercise.exerciseId), // Use exerciseId
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -688,49 +732,56 @@ class _ExerciseCard extends StatelessWidget {
     );
   }
 
-  void _showExerciseOptions(BuildContext context) {
+  void _showExerciseOptions(
+      BuildContext context, int index, String exerciseId) {
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.bgCard,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        padding: Spacing.paddingCard,
+        padding: const EdgeInsets.all(16),
+        decoration: const BoxDecoration(
+          color: AppColors.bgCard,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               width: 40,
               height: 4,
-              decoration: const BoxDecoration(
-                color: AppColors.border,
-                borderRadius: AppRadius.roundedFull,
+              decoration: BoxDecoration(
+                color: AppColors.textDisabled,
+                borderRadius: BorderRadius.circular(2),
               ),
             ),
             Spacing.vLg,
-            Text(exercise.name, style: AppTypography.headlineSmall),
-            Spacing.vLg,
             _buildOptionItem(
-              icon: LucideIcons.replace,
-              label: 'Replace Exercise',
-              onTap: () => Navigator.pop(context),
-            ),
-            _buildOptionItem(
+              context,
               icon: LucideIcons.info,
               label: 'Exercise Info',
               onTap: () {
                 Navigator.pop(context);
+                final exercise =
+                    context.read<WorkoutProvider>().exercises[index];
                 _showExerciseInfo(context, exercise);
               },
             ),
             _buildOptionItem(
+              context,
+              icon: LucideIcons.replace,
+              label: 'Replace Exercise',
+              onTap: () {
+                _handleReplaceExercise(context, index);
+              },
+            ),
+            _buildOptionItem(
+              context,
               icon: LucideIcons.trash2,
               label: 'Remove Exercise',
               color: AppColors.error,
               onTap: () {
+                context.read<WorkoutProvider>().removeExercise(exerciseId);
                 Navigator.pop(context);
-                context.read<WorkoutProvider>().removeExercise(exercise.id);
               },
             ),
             Spacing.vLg,
@@ -740,23 +791,44 @@ class _ExerciseCard extends StatelessWidget {
     );
   }
 
-  Widget _buildOptionItem({
+  void _handleReplaceExercise(BuildContext context, int index) {
+    Navigator.pop(context); // Close details sheet
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.bgCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) => ExerciseSelectModal(
+        onExerciseSelected: (exercise) {
+          context.read<WorkoutProvider>().replaceExercise(index, exercise);
+          Navigator.pop(context); // Close picker
+        },
+      ),
+    );
+  }
+
+  Widget _buildOptionItem(
+    BuildContext context, {
     required IconData icon,
     required String label,
     required VoidCallback onTap,
     Color? color,
   }) {
-    return GestureDetector(
+    return InkWell(
       onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
-            Icon(icon, size: 20, color: color ?? AppColors.textSecondary),
+            Icon(icon, size: 20, color: color ?? AppColors.textPrimary),
             Spacing.hMd,
             Text(
               label,
-              style: AppTypography.bodyMedium.copyWith(color: color),
+              style: AppTypography.bodyLarge.copyWith(
+                color: color ?? AppColors.textPrimary,
+              ),
             ),
           ],
         ),
@@ -810,7 +882,14 @@ class _ExerciseCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(exercise.name, style: AppTypography.headlineSmall),
+                        Hero(
+                          tag: 'exercise_name_${exercise.id}',
+                          child: Material(
+                            color: Colors.transparent,
+                            child: Text(exercise.name,
+                                style: AppTypography.headlineSmall),
+                          ),
+                        ),
                         Text(exercise.muscle,
                             style: AppTypography.bodyMedium
                                 .copyWith(color: AppColors.textSecondary)),
@@ -837,6 +916,38 @@ class _ExerciseCard extends StatelessWidget {
               Spacing.vSm,
               _buildInfoRow(
                   LucideIcons.activity, 'Difficulty', 'Intermediate'), // Mock
+              Spacing.vLg,
+              const Text('Last Performed', style: AppTypography.titleMedium),
+              Spacing.vSm,
+              Consumer<WorkoutProvider>(
+                builder: (context, provider, child) {
+                  final lastSets =
+                      provider.getLastPerformedSets(exercise.exerciseId);
+                  if (lastSets == null || lastSets.isEmpty) {
+                    return Text(
+                      'No previous data for this exercise.',
+                      style: AppTypography.caption
+                          .copyWith(color: AppColors.textMuted),
+                    );
+                  }
+                  return Column(
+                    children: lastSets.map((s) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Text('Set ${lastSets.indexOf(s) + 1}',
+                                style: AppTypography.labelSmall),
+                            const Spacer(),
+                            Text('${s.kg}kg x ${s.reps}',
+                                style: AppTypography.bodySmall),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  );
+                },
+              ),
               Spacing.vLg,
               NeonButton.small(
                 title: 'Close',
@@ -958,28 +1069,53 @@ class _SetRowState extends State<_SetRow> {
         ),
         child: Row(
           children: [
-            // Set Type Selector (was Set Number)
+            // Set Type Selector (with Note indicator)
             SizedBox(
               width: 35,
-              child: Center(
-                child: _buildSetTypeSelector(provider),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  _buildSetTypeSelector(provider),
+                  if (widget.workoutSet.note != null &&
+                      widget.workoutSet.note!.isNotEmpty)
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Container(
+                        width: 6,
+                        height: 6,
+                        decoration: const BoxDecoration(
+                            color: AppColors.brandSecondary,
+                            shape: BoxShape.circle),
+                      ),
+                    ),
+                ],
               ),
             ),
-            // Previous set
+            // Previous set (or Note preview if tapped?)
             Expanded(
-              child: Center(
-                child: GestureDetector(
-                  onTap: () => _copyPreviousSet(provider),
-                  child: Text(
-                    prevDisplay,
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.textMuted,
-                      decoration: widget.previousSet != null
-                          ? TextDecoration.underline
-                          : null,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
+              child: GestureDetector(
+                onTap: () => _copyPreviousSet(provider),
+                onLongPress: () => _showNoteDialog(context, provider),
+                child: Center(
+                  child: widget.workoutSet.note != null &&
+                          widget.workoutSet.note!.isNotEmpty
+                      ? Text(
+                          widget.workoutSet.note!,
+                          style: AppTypography.caption
+                              .copyWith(color: AppColors.brandSecondary),
+                          overflow: TextOverflow.ellipsis,
+                        )
+                      : Text(
+                          prevDisplay,
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.textMuted,
+                            decoration: widget.previousSet != null
+                                ? TextDecoration.underline
+                                : null,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                 ),
               ),
             ),
@@ -1179,6 +1315,43 @@ class _SetRowState extends State<_SetRow> {
         ),
         onChanged: onChanged,
         onSubmitted: onSubmitted,
+      ),
+    );
+  }
+
+  void _showNoteDialog(BuildContext context, WorkoutProvider provider) {
+    final noteController = TextEditingController(text: widget.workoutSet.note);
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.bgCard,
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.roundedLg),
+        title: const Text('Set Note', style: AppTypography.headlineSmall),
+        content: GymInput(
+          controller: noteController,
+          hint: 'Enter note...',
+          autofocus: true,
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel',
+                style: TextStyle(color: AppColors.textSecondary)),
+          ),
+          NeonButton(
+            title: 'Save',
+            size: ButtonSize.small,
+            onPress: () {
+              provider.updateSet(
+                widget.exIndex,
+                widget.setIndex,
+                note: noteController.text.trim(),
+              );
+              Navigator.pop(context);
+            },
+          ),
+        ],
       ),
     );
   }
@@ -1424,11 +1597,12 @@ class _WorkoutSettingsSheet extends StatelessWidget {
 }
 
 // =============================================================================
-// EXERCISE SELECT MODAL (unchanged but optimized)
+// EXERCISE SELECT MODAL
 // =============================================================================
 
 class ExerciseSelectModal extends StatefulWidget {
-  const ExerciseSelectModal({super.key});
+  final Function(Exercise)? onExerciseSelected;
+  const ExerciseSelectModal({super.key, this.onExerciseSelected});
 
   @override
   State<ExerciseSelectModal> createState() => _ExerciseSelectModalState();
@@ -1506,11 +1680,20 @@ class _ExerciseSelectModalState extends State<ExerciseSelectModal> {
                   ),
                   title: ex.name,
                   subtitle: ex.muscle,
-                  trailing: const Icon(LucideIcons.plus,
-                      color: AppColors.brandPrimary, size: 20),
+                  trailing: Icon(
+                    widget.onExerciseSelected != null
+                        ? LucideIcons.replace
+                        : LucideIcons.plus,
+                    color: AppColors.brandPrimary,
+                    size: 20,
+                  ),
                   onTap: () {
-                    context.read<WorkoutProvider>().addExercise(ex);
-                    Navigator.pop(context);
+                    if (widget.onExerciseSelected != null) {
+                      widget.onExerciseSelected!(ex);
+                    } else {
+                      context.read<WorkoutProvider>().addExercise(ex);
+                      Navigator.pop(context);
+                    }
                   },
                 );
               },

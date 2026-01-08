@@ -1,7 +1,7 @@
 import 'dart:convert';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'app_theme.dart';
 
 /// SettingsProvider - Manages app settings with persistence
 ///
@@ -11,9 +11,8 @@ import 'app_theme.dart';
 /// - User preferences (notifications, haptics, etc.)
 /// - All settings persist across app restarts
 class SettingsProvider with ChangeNotifier {
-  // Theme settings
-  ThemeMode _themeMode = ThemeMode.dark;
-  Color _accentColor = AppColors.brandPrimary;
+  // Onboarding status
+  bool _isFirstRun = true;
 
   // User preferences
   bool _notificationsEnabled = true;
@@ -23,27 +22,19 @@ class SettingsProvider with ChangeNotifier {
   bool _reducedMotion = false;
   int _defaultRestSeconds = 90;
   String _weightUnit = 'kg';
+  int _weeklyGoal = 4;
 
   // User profile
   String _userName = 'Athlete';
-
-  // Available accent colors
-  static const List<Color> accentColors = [
-    AppColors.brandPrimary, // Green
-    Color(0xFF3B82F6), // Blue
-    Color(0xFFA855F7), // Purple
-    Color(0xFFF97316), // Orange
-    Color(0xFFEF4444), // Red
-    Color(0xFF14B8A6), // Teal
-  ];
+  int _totalXP = 0;
+  List<String> _unlockedAchievementIds = [];
 
   SettingsProvider() {
     _loadSettings();
   }
 
   // Getters
-  ThemeMode get themeMode => _themeMode;
-  Color get accentColor => _accentColor;
+  bool get isFirstRun => _isFirstRun;
   bool get notificationsEnabled => _notificationsEnabled;
   bool get hapticFeedbackEnabled => _hapticFeedbackEnabled;
   bool get autoRestTimer => _autoRestTimer;
@@ -51,17 +42,12 @@ class SettingsProvider with ChangeNotifier {
   bool get reducedMotion => _reducedMotion;
   int get defaultRestSeconds => _defaultRestSeconds;
   String get weightUnit => _weightUnit;
+  int get weeklyGoal => _weeklyGoal;
   String get userName => _userName;
 
-  // Theme setters
-  void setThemeMode(ThemeMode mode) {
-    _themeMode = mode;
-    _saveSettings();
-    notifyListeners();
-  }
-
-  void setAccentColor(Color color) {
-    _accentColor = color;
+  // Onboarding
+  void completeOnboarding() {
+    _isFirstRun = false;
     _saveSettings();
     notifyListeners();
   }
@@ -109,11 +95,48 @@ class SettingsProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  void setWeeklyGoal(int value) {
+    _weeklyGoal = value;
+    _saveSettings();
+    notifyListeners();
+  }
+
   void setUserName(String name) {
     _userName = name;
     _saveSettings();
     notifyListeners();
   }
+
+  // Level Logic: Level = floor(sqrt(XP / 500)) + 1
+  int get userLevel {
+    if (_totalXP < 500) return 1;
+    return math.sqrt(_totalXP / 500).floor() + 1;
+  }
+
+  // Progress to next level (0.0 to 1.0)
+  double get levelProgress {
+    int currentL = userLevel;
+    int xpForCurrent = (currentL - 1) * (currentL - 1) * 500;
+    int xpForNext = currentL * currentL * 500;
+    if (xpForNext <= xpForCurrent) return 0.0;
+    return (math.max(0, _totalXP - xpForCurrent)) / (xpForNext - xpForCurrent);
+  }
+
+  void addXP(int amount) {
+    _totalXP += amount;
+    _saveSettings();
+    notifyListeners();
+  }
+
+  void unlockAchievement(String id) {
+    if (!_unlockedAchievementIds.contains(id)) {
+      _unlockedAchievementIds.add(id);
+      _saveSettings();
+      notifyListeners();
+    }
+  }
+
+  bool isAchievementUnlocked(String id) => _unlockedAchievementIds.contains(id);
 
   // Persistence
   Future<void> _loadSettings() async {
@@ -124,10 +147,8 @@ class SettingsProvider with ChangeNotifier {
       if (data != null) {
         final json = jsonDecode(data) as Map<String, dynamic>;
 
-        // Theme
-        _themeMode = ThemeMode.values[json['themeMode'] ?? 0];
-        _accentColor =
-            Color(json['accentColor'] ?? AppColors.brandPrimary.toARGB32());
+        // Onboarding
+        _isFirstRun = json['isFirstRun'] ?? true;
 
         // Preferences
         _notificationsEnabled = json['notificationsEnabled'] ?? true;
@@ -137,9 +158,13 @@ class SettingsProvider with ChangeNotifier {
         _reducedMotion = json['reducedMotion'] ?? false;
         _defaultRestSeconds = json['defaultRestSeconds'] ?? 90;
         _weightUnit = json['weightUnit'] ?? 'kg';
+        _weeklyGoal = json['weeklyGoal'] ?? 4;
 
         // Profile
         _userName = json['userName'] ?? 'Athlete';
+        _totalXP = json['totalXP'] ?? 0;
+        _unlockedAchievementIds =
+            List<String>.from(json['unlockedAchievementIds'] ?? []);
 
         notifyListeners();
       }
@@ -152,8 +177,7 @@ class SettingsProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final data = jsonEncode({
-        'themeMode': _themeMode.index,
-        'accentColor': _accentColor.toARGB32(),
+        'isFirstRun': _isFirstRun,
         'notificationsEnabled': _notificationsEnabled,
         'hapticFeedbackEnabled': _hapticFeedbackEnabled,
         'autoRestTimer': _autoRestTimer,
@@ -161,7 +185,10 @@ class SettingsProvider with ChangeNotifier {
         'reducedMotion': _reducedMotion,
         'defaultRestSeconds': _defaultRestSeconds,
         'weightUnit': _weightUnit,
+        'weeklyGoal': _weeklyGoal,
         'userName': _userName,
+        'totalXP': _totalXP,
+        'unlockedAchievementIds': _unlockedAchievementIds,
       });
       await prefs.setString('app_settings', data);
     } catch (e) {

@@ -80,6 +80,8 @@ Items deferred from V1.2 that require significant implementation effort.
 - **Reason:** Option exists but just closes modal, no info shown
 - **Effort:** Low
 
+
+
 ---
 
 ## 📊 Statistics & History
