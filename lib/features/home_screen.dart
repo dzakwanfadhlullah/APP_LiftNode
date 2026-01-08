@@ -10,6 +10,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../models/models.dart';
 import 'templates_screen.dart';
+import '../core/widgets/premium_home_widgets.dart';
 
 // =============================================================================
 // PHASE 3: HOME SCREEN ENHANCEMENTS
@@ -46,17 +47,20 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void _errorListener() {
     final provider = context.read<WorkoutProvider>();
     if (provider.errorMessage != null && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.errorMessage!),
-          backgroundColor: AppColors.error,
-          action: SnackBarAction(
-            label: 'Dismiss',
-            textColor: Colors.white,
-            onPressed: provider.clearError,
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(provider.errorMessage!),
+            backgroundColor: AppColors.error,
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: provider.clearError,
+            ),
           ),
-        ),
-      );
+        );
+      });
     }
   }
 
@@ -97,33 +101,39 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 children: [
                   GestureDetector(
                     onTap: () {
-                      // Navigate to Profile Tab (index 3)
-                      // This assumes HomeScreen is hosted in a MainScaffold that provides navigation
-                      // For now, if we can't easily switch tabs from here without a global controller,
-                      // we can just open the edit sheet if we are in ProfileScreen,
-                      // but here in HomeScreen it's better to navigate.
-                      // Actually, the easiest way to switch tabs in this specific architecture
-                      // (if using a stateful MainScaffold) is to use a provider or a global key.
-                      // Since I don't see one yet, I'll check how tabs are switched.
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                             content: Text('Navigate to Profile tab below!')),
                       );
                     },
-                    child: GymAvatar(
-                      name: settings.userName,
-                      size: 44,
-                      borderColor: AppColors.brandPrimary,
+                    child: GradientAvatarRing(
+                      size: 52,
+                      child: GymAvatar(
+                        name: settings.userName,
+                        size: 48,
+                        borderWidth: 0, // No border needed inside the ring
+                        borderColor: Colors.transparent,
+                      ),
                     ),
                   ),
                   Spacing.hMd,
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        _getDynamicGreeting().toUpperCase(),
-                        style: AppTypography.overline.copyWith(
-                          color: AppColors.textSecondary,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.brandPrimary.withValues(alpha: 0.1),
+                          borderRadius: AppRadius.roundedSm,
+                        ),
+                        child: Text(
+                          _getDynamicGreeting().toUpperCase(),
+                          style: AppTypography.overline.copyWith(
+                            color: AppColors.brandPrimary,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
                         ),
                       ),
                       Spacing.vXxs,
@@ -135,7 +145,14 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ],
               ),
-              _buildStreakBadge(context),
+              Consumer<WorkoutProvider>(
+                builder: (context, provider, child) {
+                  return AnimatedFireBadge(
+                    streak: provider.streak,
+                    onTap: () => _showStreakDetails(context),
+                  );
+                },
+              ),
             ],
           );
         },
@@ -151,44 +168,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     if (hour < 17) return 'Good Afternoon 💪';
     if (hour < 21) return 'Good Evening 🌆';
     return 'Night Owl 🦉';
-  }
-
-  Widget _buildStreakBadge(BuildContext context) {
-    return GestureDetector(
-      onTap: () => _showStreakDetails(context),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              const Color(0xFFF97316).withValues(alpha: 0.2),
-              const Color(0xFFEF4444).withValues(alpha: 0.1),
-            ],
-          ),
-          borderRadius: AppRadius.roundedFull,
-          border: Border.all(
-            color: const Color(0xFFF97316).withValues(alpha: 0.4),
-          ),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(LucideIcons.flame, size: 18, color: Color(0xFFF97316)),
-            Spacing.hXs,
-            Consumer<WorkoutProvider>(
-              builder: (context, provider, child) {
-                return Text(
-                  '${provider.streak} Day',
-                  style: AppTypography.labelMedium.copyWith(
-                    color: const Color(0xFFF97316),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   void _showStreakDetails(BuildContext context) {
@@ -270,92 +249,49 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   // ===========================================================================
 
   Widget _buildBentoGrid(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final itemWidth = (screenWidth - 32 - 12) / 2;
     final workoutProvider =
         Provider.of<WorkoutProvider>(context, listen: false);
 
     return Padding(
       padding: Spacing.paddingScreen,
-      child: Wrap(
-        spacing: 12,
-        runSpacing: 12,
+      child: Column(
         children: [
-          // Hero Action Card
+          // Hero Action Card (Full Width)
           _buildHeroCard(workoutProvider),
+          Spacing.vMd,
 
-          // Volume Chart Card with toggle
-          _buildVolumeChartCard(itemWidth),
-
-          // Last Session Card with animated stats
-          _buildLastSessionCard(context, itemWidth),
-
-          // Weekly Goal Card (Phase 2.7)
-          _buildWeeklyGoalCard(itemWidth),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Left Column
+              Expanded(
+                child: Column(
+                  children: [
+                    _buildLastSessionCard(context),
+                    Spacing.vMd,
+                    _buildWeeklyGoalCard(),
+                  ],
+                ),
+              ),
+              Spacing.hMd,
+              // Right Column
+              Expanded(
+                child: _buildVolumeChartCard(),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
   Widget _buildHeroCard(WorkoutProvider workoutProvider) {
-    // Phase 2.1.M2: Migrated to GlassCard.gradient for premium look
-    return GlassCard.gradient(
-      width: double.infinity,
-      customGradient: GlassCardTheme.heroGradient,
+    return PremiumHeroCard(
       onTap: () {
         if (!kIsWeb) HapticFeedback.mediumImpact();
         workoutProvider.startWorkout();
       },
       onLongPress: () => _showQuickActions(context),
-      child: SizedBox(
-        height: 140,
-        child: Stack(
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(LucideIcons.plus,
-                      size: 28, color: Colors.black),
-                ),
-                Spacing.hMd,
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Start Workout',
-                      style: AppTypography.headlineLarge
-                          .copyWith(color: Colors.black),
-                    ),
-                    Spacing.vXxs,
-                    Text(
-                      'Tap to begin • Hold for options',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: Colors.black.withValues(alpha: 0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-            Positioned(
-              right: -30,
-              bottom: -30,
-              child: Icon(
-                LucideIcons.dumbbell,
-                size: 140,
-                color: Colors.black.withValues(alpha: 0.08),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -451,128 +387,126 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildVolumeChartCard(double width) {
-    // Phase 2.1.M2: Migrated to GlassCard.frosted
-    return GlassCard.frosted(
-      width: width,
-      accentColor: AppColors.brandPrimary,
-      onTap: () => _toggleChartPeriod(),
-      child: SizedBox(
-        height: 160,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'VOLUME (KG)',
-                  style: AppTypography.overline
-                      .copyWith(color: AppColors.textSecondary),
-                ),
-                const Icon(
-                  LucideIcons.refreshCw,
-                  size: 12,
-                  color: AppColors.textMuted,
-                ),
-              ],
-            ),
-            Spacing.vSm,
-            Expanded(child: _VolumeChart(period: _chartPeriod)),
-            Spacing.vSm,
-            Center(
-              child: GestureDetector(
-                onTap: () => _toggleChartPeriod(),
-                child: GymBadge(
-                  text: _chartPeriod == 'week' ? 'THIS WEEK' : 'THIS MONTH',
-                  icon: LucideIcons.calendar,
+  Widget _buildVolumeChartCard() {
+    return Consumer<WorkoutProvider>(
+      builder: (context, provider, child) {
+        final spots = _getVolumeSpots(provider.history, _chartPeriod);
+
+        return Container(
+          height: 312, // Double height of other cards for bento effect
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: AppColors.bgCard,
+            borderRadius: AppRadius.roundedLg,
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'VOLUME',
+                    style: AppTypography.overline.copyWith(
+                      color: AppColors.textSecondary,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => _toggleChartPeriod(),
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: AppColors.brandPrimary.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(LucideIcons.repeat,
+                          size: 12, color: AppColors.brandPrimary),
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              _buildLargeCounter(provider),
+              const Spacer(),
+              GradientAreaChart(
+                spots: spots,
+                height: 120,
+                color: AppColors.brandPrimary,
+              ),
+              Spacing.vSm,
+              Center(
+                child: Text(
+                  _chartPeriod == 'week' ? 'LAST 7 DAYS' : 'LAST 4 WEEKS',
+                  style: AppTypography.caption
+                      .copyWith(color: AppColors.textMuted),
                 ),
               ),
-            ),
-          ],
-        ),
-      ),
+            ],
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildWeeklyGoalCard(double width) {
+  List<FlSpot> _getVolumeSpots(List<WorkoutHistory> history, String period) {
+    final List<double> values;
+    if (period == 'week') {
+      values = List.generate(7, (i) {
+        final date = DateTime.now().subtract(Duration(days: 6 - i));
+        final dayWorkouts = history.where((w) =>
+            w.date.year == date.year &&
+            w.date.month == date.month &&
+            w.date.day == date.day);
+        return dayWorkouts.fold<double>(0, (sum, w) => sum + w.totalVolume);
+      });
+    } else {
+      values = List.generate(4, (i) {
+        final now = DateTime.now();
+        final weekEnd = now.subtract(Duration(days: (3 - i) * 7));
+        final weekStart = weekEnd.subtract(const Duration(days: 6));
+        final weekWorkouts = history.where((w) =>
+            w.date.isAfter(weekStart.subtract(const Duration(seconds: 1))) &&
+            w.date.isBefore(weekEnd.add(const Duration(seconds: 1))));
+        return weekWorkouts.fold<double>(0, (sum, w) => sum + w.totalVolume);
+      });
+    }
+
+    return values
+        .asMap()
+        .entries
+        .map((e) => FlSpot(e.key.toDouble(), e.value))
+        .toList();
+  }
+
+  Widget _buildLargeCounter(WorkoutProvider provider) {
+    final total =
+        provider.history.fold<double>(0, (sum, w) => sum + w.totalVolume);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        AnimatedCounter(
+          value: total.round(),
+          style:
+              AppTypography.displaySmall.copyWith(fontWeight: FontWeight.bold),
+          suffix: ' kg',
+        ),
+        Text(
+          'Total Lifted (All Time)',
+          style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWeeklyGoalCard() {
     return Consumer2<WorkoutProvider, SettingsProvider>(
       builder: (context, workout, settings, child) {
-        final count = workout.weeklyWorkoutCount;
-        final goal = settings.weeklyGoal;
-        final progress = (count / goal).clamp(0.0, 1.0);
-
-        // Phase 2.1.M2: Migrated to GlassCard.frosted
-        return GlassCard.frosted(
-          width: width,
-          accentColor: AppColors.brandSecondary,
-          onTap: () {
-            // Future: Show goal settings
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Goal settings coming soon!')),
-            );
-          },
-          child: SizedBox(
-            height: 160,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'WEEKLY GOAL',
-                      style: AppTypography.overline
-                          .copyWith(color: AppColors.textSecondary),
-                    ),
-                    Icon(
-                      LucideIcons.target,
-                      size: 14,
-                      color: progress >= 1.0
-                          ? AppColors.brandPrimary
-                          : AppColors.textMuted,
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                Center(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      SizedBox(
-                        width: 70,
-                        height: 70,
-                        child: CircularProgressIndicator(
-                          value: progress,
-                          strokeWidth: 6,
-                          backgroundColor: AppColors.bgCardHover,
-                          color: AppColors.brandPrimary,
-                        ),
-                      ),
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text('$count', style: AppTypography.headlineSmall),
-                          Text('/$goal',
-                              style: AppTypography.caption
-                                  .copyWith(color: AppColors.textMuted)),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  progress >= 1.0 ? 'Goal Reached! 🎉' : '${goal - count} left',
-                  style: AppTypography.caption.copyWith(
-                    color: progress >= 1.0
-                        ? AppColors.brandPrimary
-                        : AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
+        return PremiumGoalCard(
+          count: workout.weeklyWorkoutCount,
+          goal: settings.weeklyGoal,
+          height: 148,
         );
       },
     );
@@ -585,80 +519,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     });
   }
 
-  Widget _buildLastSessionCard(BuildContext context, double width) {
+  Widget _buildLastSessionCard(BuildContext context) {
     return Consumer<WorkoutProvider>(
       builder: (context, provider, child) {
         final lastSession = provider.lastSession;
         if (lastSession == null) {
-          // Phase 2.1.M2: Migrated to GlassCard.frosted
-          return GlassCard.frosted(
-            width: width,
-            child: SizedBox(
-              height: 160,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(LucideIcons.history,
-                      size: 32, color: AppColors.textMuted),
-                  Spacing.vSm,
-                  Text('No Sessions',
-                      style: AppTypography.bodySmall
-                          .copyWith(color: AppColors.textMuted)),
-                ],
-              ),
-            ),
+          return const PremiumStatCard(
+            height: 148,
+            title: 'LAST SESSION',
+            value: 'NONE',
+            subtitle: 'Start training',
+            icon: LucideIcons.history,
+            accentColor: AppColors.textMuted,
           );
         }
 
-        // Phase 2.1.M2: Migrated to GlassCard.frosted
-        return GlassCard.frosted(
-          width: width,
+        return PremiumStatCard(
+          height: 148,
+          title: 'LAST VOL',
+          value: '${lastSession.totalVolume.round()}kg',
+          subtitle: lastSession.name,
+          icon: LucideIcons.history,
+          accentColor: AppColors.brandSecondary,
           onTap: () => _showSessionDetails(context, lastSession),
-          child: SizedBox(
-            height: 160,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'LAST SESSION',
-                      style: AppTypography.overline
-                          .copyWith(color: AppColors.textSecondary),
-                    ),
-                    const Icon(LucideIcons.history,
-                        size: 14, color: AppColors.brandSecondary),
-                  ],
-                ),
-                Spacing.vSm,
-                Text(lastSession.name,
-                    style: AppTypography.headlineSmall,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis),
-                Spacing.vXxs,
-                Text(
-                  'Vol: ${lastSession.totalVolume.round()}kg',
-                  style: AppTypography.bodySmall
-                      .copyWith(color: AppColors.textSecondary),
-                ),
-                const Spacer(),
-                Row(
-                  children: [
-                    if (lastSession.prCount > 0)
-                      const GymBadge(
-                          text: 'PR', color: AppColors.brandSecondary),
-                    if (lastSession.prCount > 0) Spacing.hXs,
-                    Text(
-                      '${lastSession.duration} min',
-                      style: AppTypography.caption
-                          .copyWith(color: AppColors.textMuted),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
         );
       },
     );
@@ -778,29 +661,26 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   Widget _buildRecentHistory(BuildContext context) {
     return Consumer<WorkoutProvider>(
       builder: (context, provider, child) {
-        final history = provider.history.take(5).toList();
+        final history = provider.history.take(10).toList();
 
-        return Padding(
-          padding: Spacing.paddingScreen,
-          child: Column(
-            children: [
-              Row(
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: Spacing.paddingScreen,
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Text('Recent History',
                       style: AppTypography.headlineSmall),
-                  TextButton.icon(
+                  TextButton(
                     onPressed: () {
-                      // Navigate to history tab via main scaffold if possible,
-                      // but here we just show a message since we are a sub-page.
-                      // Actually, it's better to just keep it as is or show info.
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                             content: Text('Switch to History tab to see all')),
                       );
                     },
-                    icon: const Icon(LucideIcons.arrowRight, size: 16),
-                    label: Text(
+                    child: Text(
                       'VIEW ALL',
                       style: AppTypography.labelSmall
                           .copyWith(color: AppColors.brandPrimary),
@@ -808,254 +688,13 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                 ],
               ),
-              Spacing.vMd,
-              if (history.isEmpty)
-                _buildEmptyHistory()
-              else
-                ...history.map((workout) {
-                  return _HistoryItem(
-                    key: ValueKey(workout.id),
-                    workout: workout,
-                    onDismissed: () {
-                      provider.deleteHistoryEntry(workout.id);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Workout deleted')),
-                      );
-                    },
-                  );
-                }),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildEmptyHistory() {
-    return GymEmptyState(
-      icon: LucideIcons.dumbbell,
-      title: 'No Workouts Yet',
-      subtitle: 'Start your first workout to see your history here.',
-      action: PremiumButton.primary(
-        title: 'Start Workout',
-        icon: LucideIcons.plus,
-        enableShimmer: true,
-        enablePulse: true,
-        onPress: () {
-          Provider.of<WorkoutProvider>(context, listen: false).startWorkout();
-        },
-      ),
-    );
-  }
-}
-
-// =============================================================================
-// HISTORY ITEM WITH SWIPE-TO-DELETE
-// =============================================================================
-
-class _HistoryItem extends StatelessWidget {
-  final WorkoutHistory workout;
-  final VoidCallback onDismissed;
-
-  const _HistoryItem({
-    super.key,
-    required this.workout,
-    required this.onDismissed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Dismissible(
-      key: key!,
-      direction: DismissDirection.endToStart,
-      onDismissed: (_) => onDismissed(),
-      background: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: const BoxDecoration(
-          color: AppColors.error,
-          borderRadius: AppRadius.roundedLg,
-        ),
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Icon(LucideIcons.trash2, color: Colors.white),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 12),
-        // Phase 2.1.M2: Migrated to GlassCard.outlined for subtle history items
-        child: GlassCard.outlined(
-          onTap: () => _showHistoryDetails(context),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: AppColors.brandPrimary.withValues(alpha: 0.1),
-                  borderRadius: AppRadius.roundedMd,
-                ),
-                child: const Icon(
-                  LucideIcons.check,
-                  size: 22,
-                  color: AppColors.brandPrimary,
-                ),
-              ),
-              Spacing.hMd,
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(workout.name, style: AppTypography.titleMedium),
-                    Spacing.vXxs,
-                    Text(
-                      _formatDate(workout.date),
-                      style: AppTypography.caption
-                          .copyWith(color: AppColors.textMuted),
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    '${workout.totalVolume.round()} kg',
-                    style: AppTypography.statSmall.copyWith(fontSize: 16),
-                  ),
-                  Spacing.vXxs,
-                  const Icon(
-                    LucideIcons.chevronRight,
-                    size: 16,
-                    color: AppColors.textMuted,
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  String _formatDate(DateTime date) {
-    final now = DateTime.now();
-    final diff = now.difference(date);
-    if (diff.inDays == 0) return 'Today';
-    if (diff.inDays == 1) return 'Yesterday';
-    return '${date.day}/${date.month}/${date.year}';
-  }
-
-  void _showHistoryDetails(BuildContext context) {
-    if (!kIsWeb) HapticFeedback.lightImpact();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${workout.name} details coming soon!')),
-    );
-  }
-}
-
-// =============================================================================
-// PHASE 3.3: VOLUME CHART WITH WEEKLY/MONTHLY TOGGLE
-// =============================================================================
-
-class _VolumeChart extends StatelessWidget {
-  final String period;
-
-  const _VolumeChart({required this.period});
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<WorkoutProvider>(
-      builder: (context, provider, child) {
-        final history = provider.history;
-        final List<double> values;
-
-        if (period == 'week') {
-          // Last 7 days
-          values = List.generate(7, (i) {
-            final date = DateTime.now().subtract(Duration(days: 6 - i));
-            final dayWorkouts = history.where((w) =>
-                w.date.year == date.year &&
-                w.date.month == date.month &&
-                w.date.day == date.day);
-            return dayWorkouts.fold<double>(0, (sum, w) => sum + w.totalVolume);
-          });
-        } else {
-          // Last 4 weeks
-          values = List.generate(4, (i) {
-            final now = DateTime.now();
-            final weekEnd = now.subtract(Duration(days: (3 - i) * 7));
-            final weekStart = weekEnd.subtract(const Duration(days: 6));
-            final weekWorkouts = history.where((w) =>
-                w.date
-                    .isAfter(weekStart.subtract(const Duration(seconds: 1))) &&
-                w.date.isBefore(weekEnd.add(const Duration(seconds: 1))));
-            return weekWorkouts.fold<double>(
-                0, (sum, w) => sum + w.totalVolume);
-          });
-        }
-
-        final maxVal = values.fold<double>(0, (max, v) => v > max ? v : max);
-        final maxY = maxVal == 0 ? 100.0 : maxVal * 1.2;
-
-        return BarChart(
-          BarChartData(
-            alignment: BarChartAlignment.spaceBetween,
-            maxY: maxY,
-            barTouchData: BarTouchData(
-              touchTooltipData: BarTouchTooltipData(
-                tooltipBgColor: AppColors.bgCardHover,
-                tooltipRoundedRadius: 8,
-                getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                  return BarTooltipItem(
-                    '${rod.toY.round()}kg\n',
-                    const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                    children: [
-                      TextSpan(
-                        text: period == 'week'
-                            ? 'Day ${groupIndex + 1}'
-                            : 'Week ${groupIndex + 1}',
-                        style: const TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.normal,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
             ),
-            titlesData: const FlTitlesData(show: false),
-            gridData: const FlGridData(show: false),
-            borderData: FlBorderData(show: false),
-            barGroups: values.asMap().entries.map((entry) {
-              final isHighlight = entry.value > 0;
-              return BarChartGroupData(
-                x: entry.key,
-                barRods: [
-                  BarChartRodData(
-                    toY: entry.value,
-                    gradient: isHighlight
-                        ? const LinearGradient(
-                            begin: Alignment.bottomCenter,
-                            end: Alignment.topCenter,
-                            colors: [Color(0xFF8BD56B), AppColors.brandPrimary],
-                          )
-                        : null,
-                    color: isHighlight ? null : AppColors.bgCardHover,
-                    width: period == 'week' ? 10 : 20,
-                    borderRadius:
-                        BorderRadius.circular(period == 'week' ? 5 : 8),
-                  ),
-                ],
-              );
-            }).toList(),
-          ),
-          swapAnimationDuration: AppAnimations.normal,
-          swapAnimationCurve: AppAnimations.smooth,
+            Spacing.vMd,
+            HorizontalHistoryScroller(
+              history: history,
+              onTap: (session) => _showSessionDetails(context, session),
+            ),
+          ],
         );
       },
     );

@@ -570,13 +570,12 @@ Bento-style layout yang dynamic dengan berbagai ukuran dan styles.
    - Time ago dengan relative formatting
 
 ### Deliverables:
-- [ ] `GradientAvatarRing` widget
-- [ ] `AnimatedFireBadge` widget
-- [ ] `PremiumBentoGrid` layout system
-- [ ] `AnimatedCounter` widget
-- [ ] `GradientAreaChart` wrapper
+- [x] `AnimatedFireBadge` widget
+- [x] `PremiumBentoGrid` layout system
+- [x] `AnimatedCounter` widget
+- [x] `GradientAreaChart` wrapper
 - [ ] `CelebrationOverlay` untuk achievements
-- [ ] `HorizontalHistoryScroller` widget
+- [x] `HorizontalHistoryScroller` widget
 
 ---
 
@@ -634,13 +633,13 @@ class MyWidget extends StatefulWidget with BounceOnTapMixin {
 ```
 
 ### Deliverables:
-- [ ] `core/animations/` directory structure
-- [ ] 5 entry animation widgets
-- [ ] 3 interaction animation mixins
-- [ ] 3 page transition builders
-- [ ] 3 ambient animation widgets
-- [ ] 3 celebration overlays
-- [ ] `AnimationController` utilities
+- [x] `core/animations/` directory structure
+- [x] 5 entry animation widgets
+- [x] 3 interaction animation mixins
+- [x] 3 page transition builders
+- [x] 3 ambient animation widgets
+- [x] 3 celebration overlays
+- [x] `AnimationController` utilities
 
 ---
 
