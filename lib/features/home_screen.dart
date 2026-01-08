@@ -298,13 +298,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildHeroCard(WorkoutProvider workoutProvider) {
-    return GymCard(
+    // Phase 2.1.M2: Migrated to GlassCard.gradient for premium look
+    return GlassCard.gradient(
       width: double.infinity,
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [AppColors.brandPrimary, Color(0xFF8BD56B)],
-      ),
+      customGradient: GlassCardTheme.heroGradient,
       onTap: () {
         if (!kIsWeb) HapticFeedback.mediumImpact();
         workoutProvider.startWorkout();
@@ -436,8 +433,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     required String label,
     required VoidCallback onTap,
   }) {
-    return GymCard(
+    // Phase 2.1.M2: Migrated to GlassCard.frosted
+    return GlassCard.frosted(
       margin: const EdgeInsets.only(bottom: 8),
+      accentColor: AppColors.brandPrimary,
       onTap: onTap,
       child: Row(
         children: [
@@ -453,8 +452,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildVolumeChartCard(double width) {
-    return GymCard(
+    // Phase 2.1.M2: Migrated to GlassCard.frosted
+    return GlassCard.frosted(
       width: width,
+      accentColor: AppColors.brandPrimary,
       onTap: () => _toggleChartPeriod(),
       child: SizedBox(
         height: 160,
@@ -501,8 +502,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         final goal = settings.weeklyGoal;
         final progress = (count / goal).clamp(0.0, 1.0);
 
-        return GymCard(
+        // Phase 2.1.M2: Migrated to GlassCard.frosted
+        return GlassCard.frosted(
           width: width,
+          accentColor: AppColors.brandSecondary,
           onTap: () {
             // Future: Show goal settings
             ScaffoldMessenger.of(context).showSnackBar(
@@ -587,7 +590,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       builder: (context, provider, child) {
         final lastSession = provider.lastSession;
         if (lastSession == null) {
-          return GymCard(
+          // Phase 2.1.M2: Migrated to GlassCard.frosted
+          return GlassCard.frosted(
             width: width,
             child: SizedBox(
               height: 160,
@@ -606,7 +610,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           );
         }
 
-        return GymCard(
+        // Phase 2.1.M2: Migrated to GlassCard.frosted
+        return GlassCard.frosted(
           width: width,
           onTap: () => _showSessionDetails(context, lastSession),
           child: SizedBox(
@@ -831,9 +836,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       icon: LucideIcons.dumbbell,
       title: 'No Workouts Yet',
       subtitle: 'Start your first workout to see your history here.',
-      action: NeonButton(
+      action: PremiumButton.primary(
         title: 'Start Workout',
         icon: LucideIcons.plus,
+        enableShimmer: true,
+        enablePulse: true,
         onPress: () {
           Provider.of<WorkoutProvider>(context, listen: false).startWorkout();
         },
@@ -874,7 +881,8 @@ class _HistoryItem extends StatelessWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.only(bottom: 12),
-        child: GymCard(
+        // Phase 2.1.M2: Migrated to GlassCard.outlined for subtle history items
+        child: GlassCard.outlined(
           onTap: () => _showHistoryDetails(context),
           child: Row(
             children: [

@@ -178,7 +178,8 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
   Widget _buildExerciseTile(Exercise ex) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      child: GymCard(
+      // Phase 2.1.M4: Migrated to GlassCard.outlined for exercise library items
+      child: GlassCard.outlined(
         padding: const EdgeInsets.all(12),
         onTap: () => _showExerciseDetail(ex),
         child: Row(
@@ -309,10 +310,9 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
                 .copyWith(color: AppColors.textSecondary),
           ),
           Spacing.vLg,
-          NeonButton(
+          PremiumButton.secondary(
             title: 'Create Custom Exercise',
-            variant: 'secondary',
-            size: ButtonSize.small,
+            size: PremiumButtonSize.compact,
             onPress: () => _showCustomExerciseModal(context),
           ),
         ],
@@ -428,9 +428,10 @@ class _ExerciseDetailSheet extends StatelessWidget {
           Selector<WorkoutProvider, bool>(
             selector: (_, p) => p.isActive,
             builder: (context, isActive, child) {
-              return NeonButton(
+              return PremiumButton.primary(
                 title: isActive ? 'Add to Workout' : 'Start Workout with this',
                 width: double.infinity,
+                enableShimmer: true,
                 onPress: () {
                   final provider = context.read<WorkoutProvider>();
                   if (!isActive) {
@@ -595,7 +596,7 @@ class _CustomExerciseSheetState extends State<_CustomExerciseSheet> {
             }).toList(),
           ),
           Spacing.vXl,
-          NeonButton(
+          PremiumButton.primary(
             title: 'Create Exercise',
             width: double.infinity,
             isDisabled: _nameController.text.isEmpty,

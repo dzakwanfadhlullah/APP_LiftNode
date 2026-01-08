@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'neon_button.dart';
+import '../shared_widgets.dart';
 
 // =============================================================================
 // GLOBAL ERROR HANDLING & RESILIENCE
@@ -65,8 +65,10 @@ class _GlobalErrorBoundaryState extends State<GlobalErrorBoundary> {
                     ),
                   ),
                   const SizedBox(height: 32),
-                  NeonButton(
+                  PremiumButton.primary(
                     title: 'Restart App',
+                    enableShimmer: true,
+                    enablePulse: true,
                     onPress: () {
                       setState(() {
                         _errorDetails = null;

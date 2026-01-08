@@ -78,14 +78,16 @@ class _HistoryScreenState extends State<HistoryScreen>
               const Text('History', style: AppTypography.displayLarge),
               Row(
                 children: [
-                  NeonButton.icon(
+                  PremiumButton.icon(
                     icon: LucideIcons.calendarDays,
                     onPress: () => _showDateRangePicker(context),
+                    style: PremiumButtonStyle.tinted,
                   ),
                   Spacing.hSm,
-                  NeonButton.icon(
+                  PremiumButton.icon(
                     icon: LucideIcons.filter,
                     onPress: () => _showFilterSheet(context),
+                    style: PremiumButtonStyle.tinted,
                   ),
                 ],
               ),
@@ -197,9 +199,8 @@ class _HistoryScreenState extends State<HistoryScreen>
               ? 'No results for "$_searchQuery". Try a different search.'
               : 'Your workout history will appear here once you complete a session.',
           action: _searchQuery.isNotEmpty
-              ? NeonButton(
+              ? PremiumButton.secondary(
                   title: 'Clear Search',
-                  variant: 'secondary',
                   onPress: () => setState(() => _searchQuery = ''),
                 )
               : null,
@@ -241,10 +242,9 @@ class _HistoryScreenState extends State<HistoryScreen>
             child: const Text('Cancel',
                 style: TextStyle(color: AppColors.textSecondary)),
           ),
-          NeonButton(
+          PremiumButton.danger(
             title: 'Delete',
-            variant: 'danger',
-            size: ButtonSize.small,
+            size: PremiumButtonSize.compact,
             onPress: () {
               context.read<WorkoutProvider>().deleteHistoryEntry(workout.id);
               Navigator.pop(context);
@@ -420,7 +420,8 @@ class _HistoryScreenState extends State<HistoryScreen>
       workoutDates[date] = (workoutDates[date] ?? 0) + 1;
     }
 
-    return GymCard(
+    // Phase 2.1.M3: Migrated to GlassCard.solid for consistent heatmap background
+    return GlassCard.solid(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -473,7 +474,9 @@ class _HistoryScreenState extends State<HistoryScreen>
   }
 
   Widget _buildStatCard(String label, String value, IconData icon) {
-    return GymCard(
+    // Phase 2.1.M3: Migrated to GlassCard.frosted
+    return GlassCard.frosted(
+      accentColor: AppColors.brandPrimary,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -509,7 +512,9 @@ class _HistoryScreenState extends State<HistoryScreen>
     final maxFreq = frequency.reduce((a, b) => a > b ? a : b);
     final normalizer = maxFreq > 0 ? maxFreq.toDouble() : 1.0;
 
-    return GymCard(
+    // Phase 2.1.M3: Migrated to GlassCard.frosted
+    return GlassCard.frosted(
+      accentColor: AppColors.brandPrimary,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: List.generate(7, (i) {
@@ -595,7 +600,8 @@ class _HistoryScreenState extends State<HistoryScreen>
       i++;
     });
 
-    return GymCard(
+    // Phase 2.1.M3: Migrated to GlassCard.frosted
+    return GlassCard.frosted(
       child: Column(
         children: [
           SizedBox(
@@ -645,7 +651,8 @@ class _HistoryScreenState extends State<HistoryScreen>
         history.where((w) => w.prCount > 0).take(5).toList();
 
     if (workoutsWithPRs.isEmpty) {
-      return GymCard(
+      // Phase 2.1.M3: Migrated to GlassCard.frosted
+      return GlassCard.frosted(
         child: Column(
           children: [
             const Icon(LucideIcons.trophy,
@@ -676,8 +683,9 @@ class _HistoryScreenState extends State<HistoryScreen>
                 ? 'Yesterday'
                 : '$daysAgo days ago';
 
-        return GymCard(
+        return GlassCard.frosted(
           margin: const EdgeInsets.only(bottom: 12),
+          accentColor: AppColors.brandPrimary,
           child: Row(
             children: [
               Container(
@@ -786,7 +794,8 @@ class _WorkoutCard extends StatelessWidget {
         padding: const EdgeInsets.only(right: 20),
         child: const Icon(LucideIcons.trash2, color: Colors.white),
       ),
-      child: GymCard(
+      // Phase 2.1.M3: Migrated to GlassCard.frosted for workout history cards
+      child: GlassCard.frosted(
         margin: const EdgeInsets.only(bottom: 12),
         onTap: onTap,
         child: Row(
@@ -871,7 +880,11 @@ class _WorkoutDetailSheet extends StatelessWidget {
                   ],
                 ),
               ),
-              NeonButton.icon(icon: LucideIcons.share2, onPress: _shareWorkout),
+              PremiumButton.icon(
+                icon: LucideIcons.share2,
+                onPress: _shareWorkout,
+                style: PremiumButtonStyle.tinted,
+              ),
             ],
           ),
           Spacing.vLg,
@@ -900,9 +913,8 @@ class _WorkoutDetailSheet extends StatelessWidget {
             ),
           ),
           Spacing.vMd,
-          NeonButton(
+          PremiumButton.secondary(
             title: 'Repeat Workout',
-            variant: 'secondary',
             width: double.infinity,
             icon: LucideIcons.repeat,
             onPress: () {
@@ -914,9 +926,8 @@ class _WorkoutDetailSheet extends StatelessWidget {
             },
           ),
           Spacing.vMd,
-          NeonButton(
+          PremiumButton.secondary(
             title: 'Save as Template',
-            variant: 'secondary',
             width: double.infinity,
             icon: LucideIcons.plus,
             onPress: () {
@@ -935,7 +946,8 @@ class _WorkoutDetailSheet extends StatelessWidget {
 
   Widget _buildDetailStat(String label, String value, IconData icon) {
     return Expanded(
-      child: GymCard(
+      // Phase 2.1.M3: Migrated to GlassCard.frosted
+      child: GlassCard.frosted(
         child: Column(
           children: [
             Icon(icon, size: 20, color: AppColors.textSecondary),

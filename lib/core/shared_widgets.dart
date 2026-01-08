@@ -4,8 +4,8 @@
 /// Individual widget files are located in lib/core/widgets/
 ///
 /// Structure:
-/// - gym_card.dart        → GymCard, ShimmerEffect
-/// - neon_button.dart     → NeonButton, ButtonSize
+/// - glass_card.dart       → GlassCard (Premium Card)
+/// - premium_button.dart   → PremiumButton, PremiumButtonSize, PremiumButtonStyle
 /// - gym_badge.dart       → GymBadge, BadgeVariant, PulsingBadge
 /// - gym_form_widgets.dart    → GymInput, GymSwitch
 /// - gym_display_widgets.dart → GymTypography, GymDivider, GymAvatar,

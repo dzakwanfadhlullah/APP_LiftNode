@@ -128,8 +128,7 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
                         selector: (_, p) => p.exercises.isNotEmpty,
                         builder: (context, hasExercises, child) {
                           if (!hasExercises) return const SizedBox.shrink();
-                          return NeonButton(
-                            variant: 'outline',
+                          return PremiumButton.secondary(
                             title: 'ADD EXERCISE',
                             icon: LucideIcons.plus,
                             onPress: () => _showExerciseModal(context),
@@ -177,9 +176,10 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
             ),
           ],
         ),
-        NeonButton.icon(
+        PremiumButton.icon(
           icon: LucideIcons.settings,
           onPress: () => _showWorkoutSettings(context),
+          style: PremiumButtonStyle.tinted,
         ),
       ],
     );
@@ -240,8 +240,9 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
       bottom: 40,
       left: 20,
       right: 20,
-      child: GymCard(
-        gradient: AppColors.gradientPrimary,
+      // Phase 2.1.M4: Migrated to GlassCard.gradient for active rest timer glow
+      child: GlassCard.gradient(
+        customGradient: GlassCardTheme.heroGradient,
         padding: const EdgeInsets.all(20),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -455,9 +456,9 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
               ),
             ],
           ),
-          NeonButton(
+          PremiumButton.primary(
             title: 'Finish',
-            size: ButtonSize.small,
+            size: PremiumButtonSize.compact,
             icon: LucideIcons.check,
             onPress: () => _showWorkoutSummary(context, provider),
           ),
@@ -486,10 +487,9 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
             child: const Text('Keep Going',
                 style: TextStyle(color: AppColors.textSecondary)),
           ),
-          NeonButton(
+          PremiumButton.danger(
             title: 'Cancel',
-            variant: 'danger',
-            size: ButtonSize.small,
+            size: PremiumButtonSize.compact,
             onPress: () {
               Navigator.pop(context);
               provider.finishWorkout(context.read<SettingsProvider>());
@@ -521,7 +521,7 @@ class _WorkoutLoggerScreenState extends State<WorkoutLoggerScreen> {
       icon: LucideIcons.dumbbell,
       title: "Let's get moving",
       subtitle: 'Add an exercise to start tracking your gains.',
-      action: NeonButton(
+      action: PremiumButton.primary(
         title: 'Add Exercise',
         icon: LucideIcons.plus,
         onPress: () => _showExerciseModal(context),
@@ -606,7 +606,8 @@ class _ExerciseCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final provider = context.read<WorkoutProvider>();
 
-    return GymCard(
+    // Phase 2.1.M4: Migrated to GlassCard.frosted for active exercise cards
+    return GlassCard.frosted(
       padding: EdgeInsets.zero,
       margin: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -949,10 +950,10 @@ class _ExerciseCard extends StatelessWidget {
                 },
               ),
               Spacing.vLg,
-              NeonButton.small(
+              PremiumButton.secondary(
                 title: 'Close',
+                size: PremiumButtonSize.compact,
                 onPress: () => Navigator.pop(context),
-                variant: 'secondary',
               ),
               Spacing.vLg,
             ],
@@ -1339,9 +1340,9 @@ class _SetRowState extends State<_SetRow> {
             child: const Text('Cancel',
                 style: TextStyle(color: AppColors.textSecondary)),
           ),
-          NeonButton(
+          PremiumButton.primary(
             title: 'Save',
-            size: ButtonSize.small,
+            size: PremiumButtonSize.compact,
             onPress: () {
               provider.updateSet(
                 widget.exIndex,
@@ -1476,17 +1477,18 @@ class _WorkoutSummarySheet extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: NeonButton(
+                child: PremiumButton.secondary(
                   title: 'Continue',
-                  variant: 'secondary',
                   onPress: onContinue,
                 ),
               ),
               Spacing.hMd,
               Expanded(
-                child: NeonButton(
+                child: PremiumButton.primary(
                   title: 'Finish',
                   icon: LucideIcons.check,
+                  enablePulse: true,
+                  enableShimmer: true,
                   onPress: onFinish,
                 ),
               ),
@@ -1504,7 +1506,8 @@ class _WorkoutSummarySheet extends StatelessWidget {
   }
 
   Widget _buildStatCard(String label, String value, IconData icon) {
-    return GymCard(
+    // Phase 2.1.M4: Migrated to GlassCard.frosted
+    return GlassCard.frosted(
       child: Column(
         children: [
           Icon(icon, size: 24, color: AppColors.textSecondary),

@@ -73,8 +73,9 @@ class TemplatesScreen extends StatelessWidget {
                 AppTypography.bodyMedium.copyWith(color: AppColors.textMuted),
           ),
           Spacing.vLg,
-          NeonButton(
+          PremiumButton.primary(
             title: 'CREATE FIRST TEMPLATE',
+            enableShimmer: true,
             onPress: () {
               Navigator.push(
                 context,
@@ -91,7 +92,8 @@ class TemplatesScreen extends StatelessWidget {
 
   Widget _buildTemplateCard(BuildContext context, WorkoutTemplate template,
       WorkoutProvider provider) {
-    return GymCard(
+    // Phase 2.1.M4: Migrated to GlassCard.outlined for template cards
+    return GlassCard.outlined(
       margin: const EdgeInsets.only(bottom: 12),
       onTap: () => _showTemplateActions(context, template, provider),
       child: Column(

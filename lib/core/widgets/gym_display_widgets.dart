@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../app_theme.dart';
-import 'gym_card.dart';
+import 'glass_card.dart'; // Phase 2.1.M1: Migrated from gym_card.dart
 
 // =============================================================================
 // DISPLAY WIDGETS: Typography, Divider, Avatar, ProgressBar, ListTile, EmptyState
@@ -246,9 +246,10 @@ class GymListTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GymCard(
+    // Phase 2.1.M1: Migrated to GlassCard.frosted
+    return GlassCard.frosted(
       padding: contentPadding ?? Spacing.paddingCard,
-      backgroundColor: backgroundColor,
+      accentColor: backgroundColor, // Use as accent for glow effect
       onTap: onTap,
       onLongPress: onLongPress,
       child: Row(

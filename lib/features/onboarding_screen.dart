@@ -81,7 +81,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               padding: Spacing.paddingScreen,
               child: Column(
                 children: [
-                  NeonButton(
+                  PremiumButton.hero(
                     title: _currentPage == _totalPages - 1
                         ? "GET STARTED"
                         : "CONTINUE",

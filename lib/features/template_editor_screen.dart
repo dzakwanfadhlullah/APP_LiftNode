@@ -180,7 +180,8 @@ class _TemplateEditorScreenState extends State<TemplateEditorScreen> {
 
   Widget _buildExerciseItem(int index) {
     final ex = _exercises[index];
-    return GymCard(
+    // Phase 2.1.M4: Migrated to GlassCard.frosted
+    return GlassCard.frosted(
       margin: const EdgeInsets.only(bottom: 12),
       child: Column(
         children: [

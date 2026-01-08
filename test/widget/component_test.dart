@@ -4,7 +4,7 @@ import 'package:gym_tracker_flutter/core/shared_widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 void main() {
-  group('NeonButton Widget', () {
+  group('PremiumButton Widget', () {
     testWidgets('should render title and handle press',
         (WidgetTester tester) async {
       bool pressed = false;
@@ -12,7 +12,7 @@ void main() {
         MaterialApp(
           home: Scaffold(
             body: Center(
-              child: NeonButton(
+              child: PremiumButton.primary(
                 title: 'Click Me',
                 onPress: () => pressed = true,
               ),
@@ -22,7 +22,8 @@ void main() {
       );
 
       expect(find.text('Click Me'), findsOneWidget);
-      await tester.tap(find.byType(ElevatedButton));
+      // PremiumButton uses a GestureDetector or InkWell inside, not a standard ElevatedButton
+      await tester.tap(find.text('Click Me'));
       await tester.pumpAndSettle();
       expect(pressed, true);
     });
@@ -31,7 +32,7 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: NeonButton(
+            body: PremiumButton.primary(
               title: 'Icon Button',
               icon: LucideIcons.plus,
               onPress: null,
@@ -44,14 +45,14 @@ void main() {
     });
   });
 
-  group('GymCard Widget', () {
+  group('GlassCard Widget', () {
     testWidgets('should render child and handle tap',
         (WidgetTester tester) async {
       bool tapped = false;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: GymCard(
+            body: GlassCard.frosted(
               onTap: () => tapped = true,
               child: const Text('Inside Card'),
             ),

@@ -17,8 +17,10 @@ class AchievementOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.all(20),
-      child: GymCard(
+      // Phase 2.1.M1: Migrated to GlassCard.frosted with achievement color glow
+      child: GlassCard.frosted(
         padding: const EdgeInsets.all(16),
+        accentColor: achievement.color, // Achievement color for glow effect
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -68,8 +70,9 @@ class AchievementOverlay extends StatelessWidget {
             Spacing.vMd,
             SizedBox(
               width: double.infinity,
-              child: NeonButton(
+              child: PremiumButton.primary(
                 title: 'AWESOME!',
+                enableShimmer: true,
                 onPress: onDismiss,
               ),
             ),

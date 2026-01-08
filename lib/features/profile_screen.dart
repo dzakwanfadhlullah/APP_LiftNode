@@ -421,9 +421,11 @@ class _ProfileScreenState extends State<ProfileScreen>
               final unlocked = settings.isAchievementUnlocked(a.id);
               return Padding(
                 padding: const EdgeInsets.only(right: 10),
-                child: GymCard(
+                // Phase 2.1.M3: Migrated to GlassCard.gradient for achievement badges
+                child: GlassCard.frosted(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  accentColor: unlocked ? a.color : AppColors.textMuted,
                   child: Opacity(
                     opacity: unlocked ? 1.0 : 0.4,
                     child: Row(
@@ -461,7 +463,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   // ===========================================================================
 
   Widget _buildPreferencesSection() {
-    return GymCard(
+    // Phase 2.1.M3: Migrated to GlassCard.solid for settings container
+    return GlassCard.solid(
       padding: EdgeInsets.zero,
       child: Column(
         children: [
@@ -740,7 +743,8 @@ class _ProfileScreenState extends State<ProfileScreen>
   // ===========================================================================
 
   Widget _buildAccountSection() {
-    return GymCard(
+    // Phase 2.1.M3: Migrated to GlassCard.solid for account section
+    return GlassCard.solid(
       padding: EdgeInsets.zero,
       child: Column(
         children: [
@@ -946,8 +950,10 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GymCard(
+    // Phase 2.1.M3: Migrated to GlassCard.frosted for profile stats
+    return GlassCard.frosted(
       width: width,
+      accentColor: color,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1093,9 +1099,11 @@ class _EditProfileSheetState extends State<_EditProfileSheet> {
             prefixIcon: LucideIcons.fileText,
           ),
           const Spacer(),
-          NeonButton(
+          PremiumButton.primary(
             title: 'Save Changes',
             icon: LucideIcons.check,
+            enableShimmer: true,
+            enablePulse: true,
             onPress: () {
               if (_nameController.text.trim().isNotEmpty) {
                 context
