@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import 'core/app_theme.dart';
 import 'core/settings_provider.dart';
 import 'core/shared_widgets.dart';
 import 'core/widgets/achievement_overlay.dart';
+import 'core/widgets/premium_navigation.dart';
 import 'core/workout_provider.dart';
 import 'features/exercise_library_screen.dart';
 import 'features/history_screen.dart';
@@ -99,131 +99,82 @@ class _MainScaffoldState extends State<MainScaffold> {
     _currentIndex = widget.initialIndex;
   }
 
+  void _onTabChanged(int index) {
+    if (!kIsWeb) HapticFeedback.selectionClick();
+    setState(() => _currentIndex = index);
+  }
+
+  void _startWorkout() {
+    context.read<WorkoutProvider>().startWorkout();
+  }
+
   @override
   Widget build(BuildContext context) {
     final workoutActive =
         context.select<WorkoutProvider, bool>((p) => p.isActive);
 
+    if (workoutActive) {
+      return const WorkoutLoggerScreen();
+    }
+
     return Scaffold(
       backgroundColor: AppColors.bgMain,
-      body: workoutActive
-          ? const WorkoutLoggerScreen()
-          : Stack(
-              children: [
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  child: KeyedSubtree(
-                    key: ValueKey(_currentIndex),
-                    child: <Widget>[
-                      const HomeScreen(),
-                      const HistoryScreen(),
-                      const ExerciseLibraryScreen(),
-                      const ProfileScreen(),
-                    ][_currentIndex],
+      extendBody: true, // Allow content to extend behind nav bar
+      body: Stack(
+        children: [
+          // Main content with fade transition
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            switchInCurve: Curves.easeOut,
+            switchOutCurve: Curves.easeIn,
+            transitionBuilder: (child, animation) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            child: KeyedSubtree(
+              key: ValueKey(_currentIndex),
+              child: <Widget>[
+                const HomeScreen(),
+                const HistoryScreen(),
+                const ExerciseLibraryScreen(),
+                const ProfileScreen(),
+              ][_currentIndex],
+            ),
+          ),
+          // Achievement Overlay
+          Consumer<WorkoutProvider>(
+            builder: (context, provider, _) {
+              if (provider.newlyUnlockedAchievements.isEmpty) {
+                return const SizedBox.shrink();
+              }
+              return Container(
+                color: Colors.black54,
+                child: Center(
+                  child: AchievementOverlay(
+                    achievement: provider.newlyUnlockedAchievements.first,
+                    onDismiss: () {
+                      provider.clearNewlyUnlockedAchievements();
+                    },
                   ),
                 ),
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  right: 0,
-                  child: _buildCustomTabBar(),
-                ),
-                // Achievement Overlay
-                Consumer<WorkoutProvider>(
-                  builder: (context, provider, _) {
-                    if (provider.newlyUnlockedAchievements.isEmpty) {
-                      return const SizedBox.shrink();
-                    }
-                    return Container(
-                      color: Colors.black54,
-                      child: Center(
-                        child: AchievementOverlay(
-                          achievement: provider.newlyUnlockedAchievements.first,
-                          onDismiss: () {
-                            provider.clearNewlyUnlockedAchievements();
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-    );
-  }
-
-  Widget _buildCustomTabBar() {
-    return Container(
-      height: 80,
-      decoration: const BoxDecoration(
-        color: AppColors.bgCard,
-        border: Border(top: BorderSide(color: AppColors.border, width: 1)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _buildTabItem(LucideIcons.house, 'Home', 0),
-          _buildTabItem(LucideIcons.clockArrowUp, 'History', 1),
-          _buildFab(),
-          _buildTabItem(LucideIcons.dumbbell, 'Library', 2),
-          _buildTabItem(LucideIcons.user, 'Profile', 3),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTabItem(IconData icon, String label, int index) {
-    final isActive = _currentIndex == index;
-    return GestureDetector(
-      onTap: () {
-        if (!kIsWeb) HapticFeedback.selectionClick();
-        setState(() => _currentIndex = index);
-      },
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 24,
-            color: isActive ? AppColors.brandPrimary : AppColors.textMuted,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: isActive ? AppColors.brandPrimary : AppColors.textMuted,
-            ),
+              );
+            },
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildFab() {
-    return GestureDetector(
-      onTap: () {
-        // Start a new workout when FAB is tapped
-        context.read<WorkoutProvider>().startWorkout();
-      },
-      child: Container(
-        width: 56,
-        height: 56,
-        margin: const EdgeInsets.only(bottom: 24),
-        decoration: BoxDecoration(
-          color: AppColors.brandPrimary,
-          shape: BoxShape.circle,
-          border: Border.all(color: AppColors.bgMain, width: 4),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.brandPrimary.withValues(alpha: 0.4),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: const Icon(LucideIcons.plus, color: Colors.black, size: 24),
+      // Premium FAB centered
+      floatingActionButton: PremiumFAB(
+        onTap: _startWorkout,
+        onLongPress: () {
+          // Could show quick actions menu here
+          if (!kIsWeb) HapticFeedback.heavyImpact();
+        },
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      // Glass Bottom Navigation
+      bottomNavigationBar: GlassBottomNavBar(
+        currentIndex: _currentIndex,
+        onTap: _onTabChanged,
+        onFabTap: _startWorkout,
       ),
     );
   }
